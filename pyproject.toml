@@ -1,0 +1,12 @@
+[project]
+name = "micro-py-sandbox"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "micropython-esp32-stubs>=1.28.0.post4",
+]
