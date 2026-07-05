@@ -6,5 +6,6 @@
 
   // Let Pylance find the vendored device libs (st7789py, vga2_bold_16x16) that live in src/.
   "python.analysis.extraPaths": ["src"],
-  "python.analysis.typeCheckingMode": "basic"
+  "python.analysis.typeCheckingMode": "basic",
+  "python-envs.defaultEnvManager": "ms-python.python:system"
 }

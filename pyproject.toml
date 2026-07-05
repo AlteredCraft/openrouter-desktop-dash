@@ -1,8 +1,10 @@
 [project]
 name = "micro-py-sandbox"
 version = "0.1.0"
-description = "Add your description here"
+description = "MicroPython sandbox for the Adafruit ESP32-S3 Reverse TFT Feather (5691): host-side dev env (stubs + mpremote workflow) for on-board code in src/"
 readme = "README.md"
+license = "MIT"
+authors = [{ name = "Sam Keen" }]
 requires-python = ">=3.12"
 dependencies = []
 

@@ -12,3 +12,6 @@ wheels/
 # MicroPython / editor
 *.mpy
 .DS_Store
+
+# Secrets: on-board config with Wi-Fi creds / API keys (keep the template, ignore the real one)
+config.py

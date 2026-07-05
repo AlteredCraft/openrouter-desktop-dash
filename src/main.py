@@ -1,4 +1,10 @@
-# main.py — TFT hello world for Adafruit ESP32-S3 Reverse TFT Feather (5691)
+"""TFT hello world for the Adafruit ESP32-S3 Reverse TFT Feather (#5691).
+
+Runs on boot: powers the display, then paints "Hello, buddy!" in white on blue.
+Deploy it with `make deploy`; open a live prompt with `make repl` (Ctrl-C stops it).
+
+The GPIO numbers below are the verified pins for this board (see the README pin table).
+"""
 from machine import Pin, SPI
 import st7789py as st7789
 import vga2_bold_16x16 as font
