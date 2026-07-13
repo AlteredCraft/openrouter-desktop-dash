@@ -75,9 +75,9 @@ this README) stays on your laptop. The `.venv` exists only so your editor can au
 
 ## Mental model
 
-If your background is desktop Python, these are the differences that trip people up:
+If your background is desktop Python, here are some of the key differences:
 
-- **The board has its own filesystem** (in flash). Your code runs *there*, not on your laptop.
+- **The board has its own filesystem** (in flash). Your code runs *there*.
   You edit files here, then *copy* them to the board. `.venv` and `pip`/`uv` packages do **not** go on the board.
 - **`main.py` runs automatically** on every power-up or reset (after an optional `boot.py`).
   Name your always-run program `main.py`.
