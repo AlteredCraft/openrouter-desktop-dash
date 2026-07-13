@@ -1,8 +1,0 @@
-{
-  // VS Code offers to install these when the folder is first opened.
-  "recommendations": [
-    "ms-python.python",       // Python language support + Pylance (uses the MicroPython stubs)
-    "charliermarsh.ruff",     // fast linter/formatter, pairs with the uv/Astral toolchain
-    "tamasfe.even-better-toml" // syntax + validation for pyproject.toml
-  ]
-}

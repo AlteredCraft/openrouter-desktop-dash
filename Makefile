@@ -1,4 +1,4 @@
-# micro-py-sandbox — MicroPython on the Adafruit ESP32-S3 Reverse TFT Feather (5691)
+# openrouter-desktop-dash — MicroPython on the Adafruit ESP32-S3 Reverse TFT Feather (5691)
 #
 # Everything in ./src is what lives ON the board. These targets drive it with mpremote.
 # PORT auto-detects the first /dev/cu.usbmodem* device (the macOS suffix shifts between

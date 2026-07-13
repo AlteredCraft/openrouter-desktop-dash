@@ -1,13 +1,37 @@
-# micro-py-sandbox
+# openrouter-desktop-dash
 
-An **OpenRouter usage dashboard** on the **Adafruit ESP32-S3 Reverse TFT Feather**
-(Adafruit #5691). It joins Wi-Fi and shows your OpenRouter spend — today / this week /
-this month — plus spend against the key's credit limit with a gauge, refreshing on its own.
-This repo is the *code*; the roadmap for the wider "cute desktop buddy" appliance lives in
-the Obsidian vault.
+A complete, worked **MicroPython example** for the **Adafruit ESP32-S3 Reverse TFT Feather**
+(Adafruit #5691): a tiny always-on desktop appliance that shows your **OpenRouter API spend**.
+Plug it in and it joins Wi-Fi, calls a live cloud API over HTTPS, and paints today / this week /
+this month of usage — plus spend against the key's credit limit — on the built-in color screen,
+refreshing on its own.
 
-It doubles as a beginner-friendly MicroPython playground. If you know Python but are new to
-microcontrollers, start with **[Mental model](#mental-model)**, then **[Setup](#setup)**.
+It's meant to be **read and forked.** The OpenRouter dashboard is just the payload; underneath
+it's a clean, end-to-end template for any "connect to an API and show it on a screen" gadget on
+the ESP32-S3. Swap the `openrouter.py` client and the `dash.py` layout and you have a weather
+frame, a CI monitor, a crypto ticker, a home-automation panel — same skeleton.
+
+New to microcontrollers but know Python? The **[Mental model](#mental-model)** section is written
+for you.
+
+## What it demonstrates
+
+The reusable ESP32-S3 + MicroPython patterns this example wires together:
+
+- **Wi-Fi station mode** with a connect timeout and status reporting (`net.py`).
+- **Authenticated HTTPS/TLS** to a real cloud API from the board, via a vendored minimal
+  `requests` (`urequests.py` + `openrouter.py`) — the part that trips most ESP32 projects up.
+- **JSON parsing** of the API response into a typed view-model.
+- **SPI color-TFT rendering** — text, rules, a status dot, and a green→orange→red progress bar
+  on the ST7789 display (`dash.py`).
+- **NTP time sync** for an on-screen clock (`net.py`).
+- **Testable architecture:** the parsing/formatting logic (`usage_view.py`) imports nothing
+  hardware-specific, so it runs and is **unit-tested on your laptop** (`make test`, 31 cases) —
+  no board required.
+- **Fail-fast config + graceful degradation:** missing settings show *Setup needed*; a failed
+  refresh keeps the last-good numbers on screen with a short reason instead of crashing.
+- **A frictionless dev loop:** an `mpremote`-driven `Makefile` that auto-detects the serial
+  port, confirms before touching the board, and gives you `deploy` / `repl` / `mount` / `run`.
 
 ## What it shows
 
@@ -29,7 +53,7 @@ inference API key — **not** a management/provisioning key. See
 ## What's here
 
 ```
-micro-py-sandbox/
+openrouter-desktop-dash/
   src/                       # <- everything here is copied ONTO the board
     main.py                  #    auto-runs on boot: connect Wi-Fi, poll, render the dash
     dash.py                  #    draws the view-model on the TFT
@@ -41,7 +65,6 @@ micro-py-sandbox/
     vga2_bold_16x16.py       #    bitmap font (vendored, MIT)
     config.example.py        #    settings + secrets template; copy to config.py
   tests/                     # HOST-only pytest for the pure logic (run: make test)
-  .vscode/settings.json      # points the editor at the venv + src/ for autocomplete
   Makefile                   # the everyday workflow (run `make help`)
   pyproject.toml + .venv/    # HOST-only dev tools (stubs + pytest); never touch the board
 ```
@@ -122,24 +145,18 @@ human name you gave the key — that lives in a `name` field exposed only by the
 which needs a provisioning key we intentionally keep off the device. So set `KEY_NAME` in
 `config.py` to show a friendly header (e.g. `"warp"`); leave it blank to show `OpenRouter`.
 
-### 4. Set up the editor + deploy
+### 4. Install deps + deploy
 
 ```bash
 uv sync                                    # installs host dev tools (stubs + pytest) into .venv
 make test                                  # sanity-check the pure logic on your laptop
+make deploy                                # copies src/*.py (incl. config.py) to the board and resets
 ```
 
-In VS Code: `Python: Select Interpreter` -> `./.venv/bin/python` (gives you autocomplete).
-VS Code will also offer this repo's recommended extensions (Python, Ruff, TOML) from
-`.vscode/extensions.json`; accept them for linting and formatting.
+(Optional: point your editor's Python interpreter at `./.venv/bin/python` so `machine`,
+`network`, etc. autocomplete from the stubs.)
 
-Then push everything to the board and watch it run:
-
-```bash
-make deploy                                # copies src/*.py (incl. config.py) and resets
-```
-
-On boot it shows **Connecting… Wi-Fi**, then your usage dash. If it shows **Setup needed**
+On boot the board shows **Connecting… Wi-Fi**, then your usage dash. If it shows **Setup needed**
 or **No Wi-Fi**, re-check `src/config.py`; for anything else see
 [Troubleshooting](#troubleshooting).
 
@@ -166,12 +183,16 @@ touching the board.
 then iterate with `make run` (quick one-shot) or `make mount` (edit locally, `import main`,
 nothing copied). Use `make test` to check the pure logic on your laptop without the board.
 
-> **Prefer buttons over the terminal?** The **MicroPico** extension (`paulober.pico-w-go`) adds
-> in-editor Run / Upload / REPL for MicroPython and works with this ESP32-S3 board despite the
-> "Pico" name. It is an all-in-one *alternative* to the `mpremote` + `make` workflow above, so
-> pick one or the other: MicroPico ships its own stubs and file transfer, which double up with
-> this repo's `.venv` stubs if you run both. That is why it is left out of
-> `.vscode/extensions.json`.
+## Make it your own
+
+The skeleton is API-agnostic. To point it at something else:
+
+1. Replace `openrouter.py` with a client for your API (keep it thin: fetch → return a dict).
+2. Reshape `usage_view.build_view()` to map that payload into a view-model, and update the
+   tests in `tests/` alongside it (they need no hardware).
+3. Adjust the `dash.py` layout to render your fields.
+
+`main.py`, `net.py`, the Makefile, and the config/secret handling stay as-is.
 
 ## Troubleshooting
 

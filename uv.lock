@@ -21,25 +21,6 @@ wheels = [
 ]
 
 [[package]]
-name = "micro-py-sandbox"
-version = "0.1.0"
-source = { virtual = "." }
-
-[package.dev-dependencies]
-dev = [
-    { name = "micropython-esp32-stubs" },
-    { name = "pytest" },
-]
-
-[package.metadata]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "micropython-esp32-stubs", specifier = ">=1.28.0.post4" },
-    { name = "pytest", specifier = ">=9.1.1" },
-]
-
-[[package]]
 name = "micropython-esp32-stubs"
 version = "1.28.0.post4"
 source = { registry = "https://pypi.org/simple" }
@@ -57,6 +38,25 @@ version = "1.28.0.post5"
 source = { registry = "https://pypi.org/simple" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/79/35/ed41077c239ad63681fb568817547afb44e7d33be8851af80c2f4934a7b9/micropython_stdlib_stubs-1.28.0.post5-py3-none-any.whl", hash = "sha256:2786030144710958c5a57d11ef1f7aa66ddabc566e2ec16d0fa549eeb9689141", size = 148984, upload-time = "2026-05-20T12:35:25.54Z" },
+]
+
+[[package]]
+name = "openrouter-desktop-dash"
+version = "0.1.0"
+source = { virtual = "." }
+
+[package.dev-dependencies]
+dev = [
+    { name = "micropython-esp32-stubs" },
+    { name = "pytest" },
+]
+
+[package.metadata]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "micropython-esp32-stubs", specifier = ">=1.28.0.post4" },
+    { name = "pytest", specifier = ">=9.1.1" },
 ]
 
 [[package]]

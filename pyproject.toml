@@ -1,7 +1,7 @@
 [project]
-name = "micro-py-sandbox"
+name = "openrouter-desktop-dash"
 version = "0.1.0"
-description = "MicroPython sandbox for the Adafruit ESP32-S3 Reverse TFT Feather (5691): host-side dev env (stubs + mpremote workflow) for on-board code in src/"
+description = "A MicroPython example for the Adafruit ESP32-S3 Reverse TFT Feather (5691): a desktop dashboard that shows your OpenRouter API spend. Host-side dev env (stubs + pytest + mpremote workflow) for on-board code in src/."
 readme = "README.md"
 license = "MIT"
 authors = [{ name = "Sam Keen" }]
