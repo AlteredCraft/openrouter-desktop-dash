@@ -24,10 +24,12 @@ The reusable ESP32-S3 + MicroPython patterns this example wires together:
 - **JSON parsing** of the API response into a typed view-model.
 - **SPI color-TFT rendering** — text, rules, a status dot, and a green→orange→red progress bar
   on the ST7789 display (`dash.py`).
+- **Debounced button input** — the on-board D1/D2 buttons page through multiple API keys
+  (`buttons.py` reads the pins; `keyring.py` holds the pure cycle logic).
 - **NTP time sync** for an on-screen clock (`net.py`).
-- **Testable architecture:** the parsing/formatting logic (`usage_view.py`) imports nothing
-  hardware-specific, so it runs and is **unit-tested on your laptop** (`make test`, 31 cases) —
-  no board required.
+- **Testable architecture:** the parsing/formatting logic (`usage_view.py`) and key-cycling
+  logic (`keyring.py`) import nothing hardware-specific, so they run and are **unit-tested on
+  your laptop** (`make test`, 46 cases) — no board required.
 - **Fail-fast config + graceful degradation:** missing settings show *Setup needed*; a failed
   refresh keeps the last-good numbers on screen with a short reason instead of crashing.
 - **A frictionless dev loop:** an `mpremote`-driven `Makefile` that auto-detects the serial
@@ -46,6 +48,10 @@ A single screen, refreshed every `REFRESH_SECONDS` (default 60):
   dot, and a last-updated clock. If a refresh fails, the last good numbers stay on screen with a
   short reason (`Check API key`, `API unreachable`).
 
+If you configure more than one key (see [Multiple keys](#multiple-keys)), the on-board buttons
+page between them — **D1 = next, D2 = previous** — and a small `1/3` pager in the bottom-right
+shows which is active. Switching keys refreshes immediately.
+
 It reads OpenRouter's `GET /api/v1/key` and `GET /api/v1/credits` using a normal (read-only)
 inference API key — **not** a management/provisioning key. See
 **[Configure Wi-Fi + OpenRouter](#openrouter-setup)**.
@@ -58,7 +64,9 @@ openrouter-desktop-dash/
     main.py                  #    auto-runs on boot: connect Wi-Fi, poll, render the dash
     dash.py                  #    draws the view-model on the TFT
     usage_view.py            #    PURE logic: API payloads -> view-model (host-tested)
+    keyring.py               #    PURE logic: config -> a cycle of API keys (host-tested)
     openrouter.py            #    OpenRouter API client (GET /key, /credits)
+    buttons.py               #    debounced D1/D2 button reads (page through keys)
     net.py                   #    Wi-Fi connect + NTP time sync
     urequests.py             #    minimal HTTP/HTTPS client (vendored, MIT)
     st7789py.py              #    ST7789 display driver (vendored, MIT)
@@ -144,6 +152,27 @@ management/provisioning key here: it isn't needed, and it can create/delete keys
 human name you gave the key — that lives in a `name` field exposed only by the Management API,
 which needs a provisioning key we intentionally keep off the device. So set `KEY_NAME` in
 `config.py` to show a friendly header (e.g. `"warp"`); leave it blank to show `OpenRouter`.
+
+#### Multiple keys  <a id="multiple-keys"></a>
+
+To watch several keys on one board, set `OPENROUTER_KEYS` in `config.py` instead of the single
+`OPENROUTER_API_KEY`, and page through them with the on-board buttons:
+
+```python
+OPENROUTER_KEYS = [
+    {"key": "sk-or-v1-...", "name": "warp"},
+    {"key": "sk-or-v1-...", "name": "prod"},
+    {"key": "sk-or-v1-...", "name": "personal"},
+]
+```
+
+- **D1** (GPIO1) selects the **next** key, **D2** (GPIO2) the **previous** one; the list wraps
+  at both ends. A `1/3` pager in the bottom-right corner marks the current key, and each key's
+  `name` shows in the header. Switching refreshes that key's usage right away.
+- When `OPENROUTER_KEYS` is present it takes precedence over `OPENROUTER_API_KEY`; each entry is
+  an ordinary read-only inference key, exactly like the single-key one. `name` is optional (it
+  falls back to `OpenRouter`, same as `KEY_NAME`), but naming your keys is what makes toggling
+  useful. With just one key configured the buttons do nothing and no pager is drawn.
 
 ### 4. Install deps + deploy
 

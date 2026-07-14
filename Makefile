@@ -11,7 +11,8 @@ MP   := mpremote connect $(PORT)
 # Files copied to the board's flash root by `make deploy`. Add new device files here.
 # config.py holds your secrets and is copied separately (it's gitignored and optional).
 DEVICE_FILES := src/st7789py.py src/vga2_bold_16x16.py src/urequests.py \
-                src/net.py src/openrouter.py src/usage_view.py src/dash.py src/main.py
+                src/net.py src/openrouter.py src/usage_view.py src/keyring.py \
+                src/buttons.py src/dash.py src/main.py
 
 .PHONY: help repl run mount deploy ls reset wipe confirm-port test
 
