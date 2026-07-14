@@ -98,16 +98,12 @@ def main():
         dash.render_error(tft, "Setup needed", "Edit config.py")
         return
 
-    # One or many keys: OPENROUTER_KEYS wins, OPENROUTER_API_KEY is the legacy fallback.
-    ring = keyring.normalize_keys(
-        getattr(config, "OPENROUTER_KEYS", None),
-        getattr(config, "OPENROUTER_API_KEY", None),
-        getattr(config, "KEY_NAME", None),
-    )
+    # One or many keys, all from OPENROUTER_KEYS; page through them with the buttons.
+    ring = keyring.normalize_keys(getattr(config, "OPENROUTER_KEYS", None))
     try:
         ring = keyring.KeyRing(ring)
     except ValueError:
-        print("Config error: set OPENROUTER_API_KEY or OPENROUTER_KEYS in src/config.py")
+        print("Config error: set OPENROUTER_KEYS in src/config.py")
         dash.render_error(tft, "Setup needed", "Add API key")
         return
 

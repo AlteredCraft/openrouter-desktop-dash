@@ -49,31 +49,12 @@ def test_non_dict_non_string_items_are_ignored():
     assert entries == [{"key": "sk-or-v1-aaa", "name": None}]
 
 
-def test_falls_back_to_single_key_when_multi_absent():
-    entries = keyring.normalize_keys(api_key="sk-or-v1-solo", key_name="warp")
-    assert entries == [{"key": "sk-or-v1-solo", "name": "warp"}]
-
-
-def test_multi_key_takes_precedence_over_single():
-    entries = keyring.normalize_keys(
-        keys=[{"key": "sk-or-v1-multi", "name": "m"}],
-        api_key="sk-or-v1-solo",
-        key_name="warp",
-    )
-    assert entries == [{"key": "sk-or-v1-multi", "name": "m"}]
-
-
-def test_single_key_used_when_multi_is_all_placeholders():
-    entries = keyring.normalize_keys(
-        keys=[{"key": "sk-or-v1-...", "name": "template"}],
-        api_key="sk-or-v1-solo",
-        key_name="warp",
-    )
-    assert entries == [{"key": "sk-or-v1-solo", "name": "warp"}]
+def test_missing_keys_yields_no_entries():
+    assert keyring.normalize_keys(keys=None) == []
 
 
 def test_untouched_template_yields_no_keys():
-    entries = keyring.normalize_keys(keys=None, api_key="sk-or-v1-...", key_name="")
+    entries = keyring.normalize_keys(keys=[{"key": "sk-or-v1-...", "name": "warp"}])
     assert entries == []
 
 

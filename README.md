@@ -29,7 +29,7 @@ The reusable ESP32-S3 + MicroPython patterns this example wires together:
 - **NTP time sync** for an on-screen clock (`net.py`).
 - **Testable architecture:** the parsing/formatting logic (`usage_view.py`) and key-cycling
   logic (`keyring.py`) import nothing hardware-specific, so they run and are **unit-tested on
-  your laptop** (`make test`, 46 cases) — no board required.
+  your laptop** (`make test`, 44 cases) — no board required.
 - **Fail-fast config + graceful degradation:** missing settings show *Setup needed*; a failed
   refresh keeps the last-good numbers on screen with a short reason instead of crashing.
 - **A frictionless dev loop:** an `mpremote`-driven `Makefile` that auto-detects the serial
@@ -43,10 +43,10 @@ A single screen, refreshed every `REFRESH_SECONDS` (default 60):
 - **Used** — spend against the key's credit limit (e.g. `$0.35` of a `$20` cap, from `limit` /
   `limit_remaining`), with a color bar that fills **green** (< 50% used) → **orange** (50–75%) →
   **red** (≥ 75%). Keys with no limit fall back to your account credit balance (`/credits`).
-- A header showing your key's name (from `KEY_NAME` in `config.py`, truncated to `10` chars +
-  `...`; falls back to `OpenRouter` if blank — see [Header name](#header-name)), a Wi-Fi status
-  dot, and a last-updated clock. If a refresh fails, the last good numbers stay on screen with a
-  short reason (`Check API key`, `API unreachable`).
+- A header showing your key's name (each key's `name` in `OPENROUTER_KEYS`, truncated to `10`
+  chars + `...`; falls back to `OpenRouter` if unset — see [Header name](#header-name)), a Wi-Fi
+  status dot, and a last-updated clock. If a refresh fails, the last good numbers stay on screen
+  with a short reason (`Check API key`, `API unreachable`).
 
 If you configure more than one key (see [Multiple keys](#multiple-keys)), the on-board buttons
 page between them — **D1 = next, D2 = previous** — and a small `1/3` pager in the bottom-right
@@ -136,27 +136,28 @@ Then edit `src/config.py`:
 ```python
 WIFI_SSID = "your-wifi-name"          # 2.4 GHz only — the ESP32-S3 has no 5 GHz radio
 WIFI_PASSWORD = "your-wifi-password"
-OPENROUTER_API_KEY = "sk-or-v1-..."   # a normal inference key from
-                                      # https://openrouter.ai/settings/keys
-KEY_NAME = "warp"                     # optional header label (see "Header name" below)
+OPENROUTER_KEYS = [                    # one or more normal inference keys from
+    {"key": "sk-or-v1-...", "name": "warp"},   # https://openrouter.ai/settings/keys
+]                                     # `name` is the header label (see "Header name" below)
 REFRESH_SECONDS = 60                  # optional
 TZ_OFFSET_HOURS = 0                   # optional; e.g. -7 for PDT (NTP syncs UTC)
 ```
 
 Any OpenRouter inference key works — the dash only *reads* usage. Don't use a
-management/provisioning key here: it isn't needed, and it can create/delete keys.
+management/provisioning key here: it isn't needed, and it can create/delete keys. List more
+than one key to page between them (see [Multiple keys](#multiple-keys)).
 
 #### Header name
 
 `GET /api/v1/key` only returns the key *string* (its `label`, e.g. `sk-or-v1-…`), **not** the
 human name you gave the key — that lives in a `name` field exposed only by the Management API,
-which needs a provisioning key we intentionally keep off the device. So set `KEY_NAME` in
-`config.py` to show a friendly header (e.g. `"warp"`); leave it blank to show `OpenRouter`.
+which needs a provisioning key we intentionally keep off the device. So set each key's `name`
+in `OPENROUTER_KEYS` to show a friendly header (e.g. `"warp"`); omit it to show `OpenRouter`.
 
 #### Multiple keys  <a id="multiple-keys"></a>
 
-To watch several keys on one board, set `OPENROUTER_KEYS` in `config.py` instead of the single
-`OPENROUTER_API_KEY`, and page through them with the on-board buttons:
+`OPENROUTER_KEYS` is a list, so add more entries to watch several keys on one board and page
+through them with the on-board buttons:
 
 ```python
 OPENROUTER_KEYS = [
@@ -169,10 +170,9 @@ OPENROUTER_KEYS = [
 - **D1** (GPIO1) selects the **next** key, **D2** (GPIO2) the **previous** one; the list wraps
   at both ends. A `1/3` pager in the bottom-right corner marks the current key, and each key's
   `name` shows in the header. Switching refreshes that key's usage right away.
-- When `OPENROUTER_KEYS` is present it takes precedence over `OPENROUTER_API_KEY`; each entry is
-  an ordinary read-only inference key, exactly like the single-key one. `name` is optional (it
-  falls back to `OpenRouter`, same as `KEY_NAME`), but naming your keys is what makes toggling
-  useful. With just one key configured the buttons do nothing and no pager is drawn.
+- Each entry is an ordinary read-only inference key. `name` is optional (it falls back to
+  `OpenRouter`), but naming your keys is what makes toggling useful. With just one key
+  configured the buttons do nothing and no pager is drawn.
 
 ### 4. Install deps + deploy
 
@@ -229,7 +229,7 @@ The skeleton is API-agnostic. To point it at something else:
 |---|---|
 | **`Setup needed` on screen** | `src/config.py` is missing or still has placeholder values. Fill it in (step 3) and `make deploy`. |
 | **`No Wi-Fi` on screen** | Wrong SSID/password, or a 5 GHz network — the ESP32-S3 is 2.4 GHz only. Fix `src/config.py` and redeploy. |
-| **`Check API key` on screen** | OpenRouter rejected the key (401/403). Verify `OPENROUTER_API_KEY` at [openrouter.ai/settings/keys](https://openrouter.ai/settings/keys). |
+| **`Check API key` on screen** | OpenRouter rejected the key (401/403). Verify the key in `OPENROUTER_KEYS` at [openrouter.ai/settings/keys](https://openrouter.ai/settings/keys). |
 | **`API unreachable` on screen** | Transient network/OpenRouter hiccup; the dash keeps the last numbers and retries next cycle. Persistent? Check the REPL log (`make repl`). |
 | **Blank screen** | GPIO7 (power) and GPIO45 (backlight) must both be HIGH; `main.py` sets them. Also confirm your USB-C cable carries *data*, not charge-only. |
 | **Colors swapped** (red/blue) | Add `color_order=st7789.RGB` to the `ST7789(...)` call in `main.py`. |

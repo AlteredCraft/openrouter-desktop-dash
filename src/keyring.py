@@ -4,9 +4,9 @@ Imports nothing hardware-specific, so this module runs under CPython and is
 unit-tested on the host (see tests/test_keyring.py). main.py wires the board's
 D1/D2 buttons to KeyRing.next()/prev(); dash.py draws position() as a "1/3" pager.
 
-Config accepts two forms (newest first):
+Keys come from config as OPENROUTER_KEYS, a list of entries — each a
+{"key", "name"} dict or a bare "sk-or-..." string:
   OPENROUTER_KEYS = [{"key": "sk-or-...", "name": "warp"}, {"key": "sk-or-...", "name": "prod"}]
-  OPENROUTER_API_KEY = "sk-or-..."   # legacy single-key form, still supported
 """
 
 
@@ -20,13 +20,12 @@ def _blank_or_placeholder(value):
     return not value or value.startswith("your-") or value == "sk-or-v1-..."
 
 
-def normalize_keys(keys=None, api_key=None, key_name=None):
-    """Build a list of {"key", "name"} entries from config, multi-key form first.
+def normalize_keys(keys=None):
+    """Build a list of {"key", "name"} entries from config's OPENROUTER_KEYS.
 
     `keys` is the OPENROUTER_KEYS list — each item a {"key", "name"} dict or a bare
-    "sk-or-..." string. `api_key` / `key_name` are the legacy single-key config, used
-    only when `keys` yields nothing usable. Blank/placeholder entries are dropped, so
-    an untouched template contributes no keys and main.py shows "Setup needed".
+    "sk-or-..." string. Blank/placeholder entries are dropped, so an untouched
+    template contributes no keys and main.py shows "Setup needed".
     """
     entries = []
     for item in keys or ():
@@ -39,9 +38,6 @@ def normalize_keys(keys=None, api_key=None, key_name=None):
         if _blank_or_placeholder(key):
             continue
         entries.append({"key": key, "name": name or None})
-
-    if not entries and not _blank_or_placeholder(api_key):
-        entries.append({"key": api_key, "name": key_name or None})
 
     return entries
 
