@@ -16,6 +16,8 @@ import net
 import openrouter
 import usage_view
 import dash
+import keyring
+import buttons
 
 
 def init_display():
@@ -49,16 +51,21 @@ def _clock():
     return "%02d:%02d" % (t[3], t[4])
 
 
-def _degrade(tft, last_view, note):
+def _degrade(tft, last_view, note, page):
     """Keep the last good numbers on screen with a warning; if none yet, show the error."""
     if last_view is not None:
-        dash.render(tft, last_view, _clock(), wifi_ok=False, note=note)
+        dash.render(tft, last_view, _clock(), wifi_ok=False, note=note, page=page)
     else:
         dash.render_error(tft, "Can't update", note)
 
 
-def _poll(tft, api_key, key_name, last_view):
-    """One refresh cycle. Returns the newest view-model (or the previous one on error)."""
+def _poll(tft, entry, page, last_view):
+    """Refresh one key's usage. `entry` is a {"key","name"} ring entry, `page` its
+    (current, total) position for the pager. Returns the newest view (or the prior one
+    on error). On a key switch pass last_view=None so a failure can't show stale numbers
+    from the previously selected key."""
+    api_key = entry["key"]
+    key_name = entry["name"]
     try:
         key = openrouter.fetch_key(api_key)
         credits = None
@@ -67,16 +74,16 @@ def _poll(tft, api_key, key_name, last_view):
         except Exception as exc:  # /credits is a bonus; /key alone is enough to render
             print("credits fetch failed:", exc)
         view = usage_view.build_view(key, credits, key_name)
-        dash.render(tft, view, _clock(), wifi_ok=net.isconnected())
+        dash.render(tft, view, _clock(), wifi_ok=net.isconnected(), page=page)
         return view
     except openrouter.ApiError as exc:
         print("API error:", exc.status)
         note = "Check API key" if exc.status in (401, 403) else "API error"
-        _degrade(tft, last_view, note)
+        _degrade(tft, last_view, note, page)
         return last_view
     except OSError as exc:
         print("Network error:", exc)
-        _degrade(tft, last_view, "API unreachable")
+        _degrade(tft, last_view, "API unreachable", page)
         return last_view
 
 
@@ -86,10 +93,22 @@ def main():
     try:
         ssid = _require("WIFI_SSID")
         password = _require("WIFI_PASSWORD")
-        api_key = _require("OPENROUTER_API_KEY")
     except ValueError as exc:
         print("Config error: set", exc, "in src/config.py")
         dash.render_error(tft, "Setup needed", "Edit config.py")
+        return
+
+    # One or many keys: OPENROUTER_KEYS wins, OPENROUTER_API_KEY is the legacy fallback.
+    ring = keyring.normalize_keys(
+        getattr(config, "OPENROUTER_KEYS", None),
+        getattr(config, "OPENROUTER_API_KEY", None),
+        getattr(config, "KEY_NAME", None),
+    )
+    try:
+        ring = keyring.KeyRing(ring)
+    except ValueError:
+        print("Config error: set OPENROUTER_API_KEY or OPENROUTER_KEYS in src/config.py")
+        dash.render_error(tft, "Setup needed", "Add API key")
         return
 
     dash.render_error(tft, "Connecting", "Wi-Fi...")
@@ -102,11 +121,33 @@ def main():
     net.sync_time()  # best-effort; the clock is cosmetic
 
     refresh = getattr(config, "REFRESH_SECONDS", 60)
-    key_name = getattr(config, "KEY_NAME", None)
-    last_view = None
+    next_btn = buttons.Button(1)  # D1 -> next key
+    prev_btn = buttons.Button(2)  # D2 -> previous key
+
+    entry = ring.current()
+    last_view = _poll(tft, entry, ring.position(), None)
+    deadline = time.ticks_add(time.ticks_ms(), refresh * 1000)
     while True:
-        last_view = _poll(tft, api_key, key_name, last_view)
-        time.sleep(refresh)
+        # Page through keys on a button press, otherwise refresh when the interval
+        # elapses. Polling buttons every 50 ms keeps toggling responsive without
+        # blocking on a long sleep between refreshes.
+        moved = False
+        if ring.has_multiple:
+            if next_btn.fell():
+                entry = ring.next()
+                moved = True
+            elif prev_btn.fell():
+                entry = ring.prev()
+                moved = True
+
+        if moved:
+            last_view = _poll(tft, entry, ring.position(), None)
+            deadline = time.ticks_add(time.ticks_ms(), refresh * 1000)
+        elif time.ticks_diff(deadline, time.ticks_ms()) <= 0:
+            last_view = _poll(tft, entry, ring.position(), last_view)
+            deadline = time.ticks_add(time.ticks_ms(), refresh * 1000)
+
+        time.sleep_ms(50)
 
 
 main()

@@ -38,8 +38,13 @@ def _center_x(text):
     return x if x > 0 else 0
 
 
-def render(tft, view, updated, wifi_ok, note=None):
-    """Draw the full dash. `note`, if set, replaces the clock with a short warning."""
+def render(tft, view, updated, wifi_ok, note=None, page=None):
+    """Draw the full dash. `note`, if set, replaces the clock with a short warning.
+
+    `page` is an optional (current, total) tuple; when more than one key is configured
+    it draws a small right-aligned "1/3" pager on the bottom row so you can see which
+    key the D1/D2 buttons have selected.
+    """
     tft.fill(st7789.BLACK)
 
     tft.text(font, usage_view.header_text(view.get("title")), 8, 0, st7789.WHITE, st7789.BLACK)
@@ -57,9 +62,14 @@ def render(tft, view, updated, wifi_ok, note=None):
     _budget_bar(tft, view["used_frac"], view["budget"], 8, 96, _W - 16, 10)
 
     if note:
+        # A warning can be up to the full row width, so skip the pager to avoid
+        # overlapping it — the header key name still shows which key is selected.
         tft.text(font, note, 8, 112, st7789.YELLOW, st7789.BLACK)
     else:
         tft.text(font, "upd " + updated, 8, 112, _DIM, st7789.BLACK)
+        if page and page[1] > 1:
+            pager = "%d/%d" % page
+            tft.text(font, pager, _W - len(pager) * _CHAR - 8, 112, _DIM, st7789.BLACK)
 
 
 def _budget_bar(tft, used_frac, budget, x, y, w, h):
