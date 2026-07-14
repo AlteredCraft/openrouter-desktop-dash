@@ -137,6 +137,9 @@ def main():
                 moved = True
 
         if moved:
+            # Acknowledge the press before the (blocking) fetch, so the switch shows
+            # instantly instead of leaving the prior key's dash up during the fetch.
+            dash.render_loading(tft, entry["name"], ring.position())
             last_view = _poll(tft, entry, ring.position(), None)
             deadline = time.ticks_add(time.ticks_ms(), refresh * 1000)
         elif time.ticks_diff(deadline, time.ticks_ms()) <= 0:

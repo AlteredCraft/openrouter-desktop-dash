@@ -94,6 +94,24 @@ def _budget_bar(tft, used_frac, budget, x, y, w, h):
     tft.text(font, label, x + bar_w + 6, y - 3, _DIM, st7789.BLACK)
 
 
+def render_loading(tft, title, page=None):
+    """Instant acknowledgement of a D1/D2 key switch.
+
+    A key switch has to wait on the network fetch before the new numbers exist, so
+    paint the newly selected key's header, a "Loading" cue and the pager right away —
+    otherwise the press leaves the *previous* key's dash on screen for the whole
+    round-trip and feels unregistered. `title` is the key's config name (None falls
+    back like the header does); `page` is the same (current, total) tuple as render().
+    """
+    tft.fill(st7789.BLACK)
+    tft.text(font, usage_view.header_text(title), 8, 0, st7789.WHITE, st7789.BLACK)
+    tft.hline(0, 18, _W, _DIM)
+    tft.text(font, "Loading", _center_x("Loading"), 56, st7789.CYAN, st7789.BLACK)
+    if page and page[1] > 1:
+        pager = "%d/%d" % page
+        tft.text(font, pager, _W - len(pager) * _CHAR - 8, 112, _DIM, st7789.BLACK)
+
+
 def render_error(tft, title, detail):
     """Centered two-line message for states with no data to show (setup/connect/fatal)."""
     tft.fill(st7789.BLACK)
