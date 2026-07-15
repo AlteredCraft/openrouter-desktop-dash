@@ -15,7 +15,7 @@
 
 <nav class="nav">
   <div class="wrap">
-    <a class="nav-logo" href="index.html"><span class="tick">▚</span> desk-dash · field guide</a>
+    <a class="nav-logo" href="index.html"><span class="tick">▚</span> desk-dash<span class="logo-sub"> · field guide</span></a>
     <div class="nav-links">
       <a href="board.html"><span class="n">01</span><span class="label">The Board</span></a>
       <a href="micropython.html"><span class="n">02</span><span class="label">MicroPython</span></a>
@@ -166,74 +166,88 @@
   <section>
     <p class="section-kicker">Blueprint</p>
     <h2>Architecture: a pure core in a hardware shell</h2>
-    <p class="mute">The design rule that shapes everything: <b>parsing and formatting logic never
-    touches hardware</b>, so it runs — and is unit-tested — on your laptop. Hardware modules stay
-    thin wrappers.</p>
+    <p class="mute">One design rule shapes everything: <b>the app's decisions — parsing, formatting,
+    fallbacks — never touch hardware</b>. Read the diagram top to bottom as a single refresh tick:
+    raw JSON comes down from the cloud, the green <b>pure core</b> reshapes it into a ready-to-draw
+    view-model, and the render pipeline pushes it to the glass. <code>main.py</code> drives every
+    numbered step; the gray boxes around the core are thin, board-only wrappers, while the pure
+    core is plain Python that runs — and is unit-tested — on your laptop.</p>
 
-    <div class="diagram">
-      <svg viewBox="0 0 800 520" role="img" aria-label="Architecture: main.py orchestrates network, buttons and config; pure view-model modules transform API payloads; dash.py renders through the ST7789 driver to the TFT">
+    <div class="diagram portrait">
+      <svg viewBox="0 0 400 866" role="img" aria-label="One refresh tick, top to bottom: the OpenRouter API answers main.py's HTTPS fetch with raw JSON; net.py, config.py and buttons.py feed the loop from the sides; the pure usage_view.py and keyring.py modules turn payloads into a view-model dict; dash.py draws it through the ST7789 driver onto the TFT">
         <defs>
-          <marker id="arr2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0 0 L10 5 L0 10 z" fill="#4a5570"/>
           </marker>
         </defs>
 
-        <rect class="dg-box cloud" x="250" y="16" width="300" height="62" rx="10"/>
-        <text class="dg-tag cloud" x="270" y="38">CLOUD</text>
-        <text class="dg-title" x="270" y="56">OpenRouter API</text>
-        <text class="dg-sub" x="270" y="71">GET /api/v1/key · GET /api/v1/credits</text>
+        <rect class="dg-box cloud" x="20" y="16" width="360" height="64" rx="10"/>
+        <text class="dg-tag cloud" x="38" y="37">CLOUD</text>
+        <text class="dg-title" x="38" y="56">OpenRouter API</text>
+        <text class="dg-sub" x="38" y="72">GET /api/v1/key · GET /api/v1/credits</text>
 
-        <line class="dg-arrow" x1="400" y1="78" x2="400" y2="128"/>
-        <text class="dg-alabel" x="412" y="106">HTTPS · openrouter.py + urequests.py</text>
+        <line class="dg-line" x1="200" y1="80" x2="200" y2="92"/>
+        <text class="dg-alabel" x="200" y="110" text-anchor="middle"><tspan class="dg-n">1</tspan> · raw usage JSON, fetched over HTTPS</text>
+        <text class="dg-alabel" x="200" y="126" text-anchor="middle">openrouter.py + vendored urequests.py</text>
+        <line class="dg-arrow" x1="200" y1="136" x2="200" y2="240"/>
 
-        <rect class="dg-box hw" x="20" y="130" width="188" height="76" rx="10"/>
-        <text class="dg-tag hw" x="38" y="152">BOARD I/O</text>
-        <text class="dg-title" x="38" y="170">net.py + config.py</text>
-        <text class="dg-sub" x="38" y="186">Wi-Fi · NTP clock · secrets</text>
-        <line class="dg-arrow" x1="208" y1="168" x2="243" y2="168"/>
+        <rect class="dg-box hw" x="20" y="152" width="170" height="62" rx="10"/>
+        <text class="dg-tag hw" x="34" y="172">BOARD I/O</text>
+        <text class="dg-title sm" x="34" y="191">net.py + config.py</text>
+        <text class="dg-sub sm" x="34" y="207">Wi-Fi · NTP · secrets</text>
+        <line class="dg-arrow" x1="105" y1="214" x2="105" y2="240"/>
 
-        <rect class="dg-box" x="250" y="130" width="300" height="76" rx="10"/>
-        <text class="dg-tag hw" x="270" y="152">ORCHESTRATOR</text>
-        <text class="dg-title" x="270" y="170">main.py — the loop</text>
-        <text class="dg-sub" x="270" y="186">poll buttons · refresh on a deadline · degrade</text>
+        <rect class="dg-box hw" x="210" y="152" width="170" height="62" rx="10"/>
+        <text class="dg-tag hw" x="224" y="172">BOARD I/O</text>
+        <text class="dg-title sm" x="224" y="191">buttons.py</text>
+        <text class="dg-sub sm" x="224" y="207">debounced D0 / D1 / D2</text>
+        <line class="dg-arrow" x1="295" y1="214" x2="295" y2="240"/>
 
-        <rect class="dg-box hw" x="592" y="130" width="188" height="76" rx="10"/>
-        <text class="dg-tag hw" x="610" y="152">BOARD I/O</text>
-        <text class="dg-title" x="610" y="170">buttons.py</text>
-        <text class="dg-sub" x="610" y="186">debounced D0 / D1 / D2</text>
-        <line class="dg-arrow" x1="592" y1="168" x2="557" y2="168"/>
+        <rect class="dg-box" x="20" y="246" width="360" height="78" rx="10"/>
+        <text class="dg-tag hw" x="38" y="267">ORCHESTRATOR</text>
+        <text class="dg-title" x="38" y="286">main.py — the loop</text>
+        <text class="dg-sub" x="38" y="303">poll buttons · refresh on a deadline · degrade</text>
 
-        <line class="dg-arrow" x1="400" y1="206" x2="400" y2="256"/>
-        <text class="dg-alabel" x="412" y="234">raw JSON payload dicts</text>
+        <line class="dg-line" x1="200" y1="324" x2="200" y2="336"/>
+        <text class="dg-alabel" x="200" y="354" text-anchor="middle"><tspan class="dg-n">2</tspan> · raw payload dicts, handed to the core</text>
+        <line class="dg-arrow" x1="200" y1="364" x2="200" y2="388"/>
 
-        <rect class="dg-box pure" x="200" y="258" width="400" height="88" rx="10"/>
-        <text class="dg-tag pure" x="220" y="282">PURE · UNIT-TESTED ON YOUR LAPTOP</text>
-        <text class="dg-title" x="220" y="302">usage_view.py · keyring.py</text>
-        <text class="dg-sub" x="220" y="319">payloads → view-model dict · key-cycling logic</text>
-        <text class="dg-sub" x="220" y="334">no machine, no network imports — just Python</text>
+        <rect class="dg-box pure" x="20" y="394" width="360" height="94" rx="10"/>
+        <text class="dg-tag pure" x="38" y="415">PURE · UNIT-TESTED ON YOUR LAPTOP</text>
+        <text class="dg-title" x="38" y="434">usage_view.py · keyring.py</text>
+        <text class="dg-sub" x="38" y="451">payloads → view-model dict · key cycling</text>
+        <text class="dg-sub" x="38" y="467">no machine, no network imports — just Python</text>
 
-        <path class="dg-arrow" d="M400 346 L400 378 L165 378 L165 408" stroke-linejoin="round"/>
-        <text class="dg-alabel" x="412" y="372">view-model dict</text>
+        <line class="dg-line" x1="200" y1="488" x2="200" y2="500"/>
+        <text class="dg-alabel" x="200" y="518" text-anchor="middle"><tspan class="dg-n">3</tspan> · view-model dict, ready to draw</text>
+        <line class="dg-arrow" x1="200" y1="528" x2="200" y2="552"/>
 
-        <rect class="dg-box hw" x="60" y="410" width="210" height="76" rx="10"/>
-        <text class="dg-tag hw" x="78" y="432">RENDERER</text>
-        <text class="dg-title" x="78" y="450">dash.py</text>
-        <text class="dg-sub" x="78" y="466">layout · colors · budget bar</text>
+        <rect class="dg-box hw" x="20" y="558" width="360" height="64" rx="10"/>
+        <text class="dg-tag hw" x="38" y="579">RENDERER</text>
+        <text class="dg-title" x="38" y="598">dash.py</text>
+        <text class="dg-sub" x="38" y="614">layout · colors · budget bar · pager</text>
 
-        <line class="dg-arrow" x1="270" y1="448" x2="313" y2="448"/>
+        <line class="dg-line" x1="200" y1="622" x2="200" y2="634"/>
+        <text class="dg-alabel" x="200" y="652" text-anchor="middle"><tspan class="dg-n">4</tspan> · draw calls — rows, colors, the bar</text>
+        <line class="dg-arrow" x1="200" y1="662" x2="200" y2="686"/>
 
-        <rect class="dg-box hw" x="320" y="410" width="210" height="76" rx="10"/>
-        <text class="dg-tag hw" x="338" y="432">VENDORED DRIVER</text>
-        <text class="dg-title" x="338" y="450">st7789py.py + font</text>
-        <text class="dg-sub" x="338" y="466">pixels over SPI @ 40 MHz</text>
+        <rect class="dg-box hw" x="20" y="692" width="360" height="64" rx="10"/>
+        <text class="dg-tag hw" x="38" y="713">VENDORED DRIVER</text>
+        <text class="dg-title" x="38" y="732">st7789py.py + font</text>
+        <text class="dg-sub" x="38" y="748">pixels over SPI @ 40 MHz</text>
 
-        <line class="dg-arrow" x1="530" y1="448" x2="573" y2="448"/>
+        <line class="dg-arrow" x1="200" y1="756" x2="200" y2="780"/>
 
-        <rect class="dg-box cloud" x="580" y="410" width="200" height="76" rx="10"/>
-        <text class="dg-tag cloud" x="598" y="432">GLASS</text>
-        <text class="dg-title" x="598" y="450">240×135 TFT</text>
-        <text class="dg-sub" x="598" y="466">the thing on your desk</text>
+        <rect class="dg-box cloud" x="20" y="786" width="360" height="64" rx="10"/>
+        <text class="dg-tag cloud" x="38" y="807">GLASS</text>
+        <text class="dg-title" x="38" y="826">240×135 TFT</text>
+        <text class="dg-sub" x="38" y="842">the thing on your desk</text>
       </svg>
+      <div class="dg-legend">
+        <span class="pure">pure logic — board + laptop</span>
+        <span>hardware wrappers — board only</span>
+        <span class="cloud">the outside world</span>
+      </div>
     </div>
 
     <div class="callout">
