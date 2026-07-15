@@ -161,8 +161,32 @@ def render_loading(tft, title, page=None):
         tft.text(font, pager, _W - len(pager) * _CHAR - 8, 112, _DIM, st7789.BLACK)
 
 
-def render_error(tft, title, detail):
-    """Centered two-line message for states with no data to show (setup/connect/fatal)."""
+_MAX_CELLS = _W // _CHAR  # 15 glyphs fit across the 240px panel
+
+
+def _clip(text):
+    """Truncate to the panel width, marking cut-off text with a trailing '~'.
+
+    The driver silently drops any glyph past the right edge, so a long value (e.g. a
+    32-char Wi-Fi SSID) would otherwise be cut mid-character with no hint there's more.
+    """
+    if len(text) <= _MAX_CELLS:
+        return text
+    return text[: _MAX_CELLS - 1] + "~"
+
+
+def render_error(tft, title, detail, detail2=None):
+    """Centered message for states with no data to show (setup/connect/fatal).
+
+    Two lines by default; pass detail2 for a third row. The Wi-Fi failure screen uses
+    it to name the SSID we tried, so a wrong/typo'd or out-of-range network is obvious
+    on the panel. Lines longer than the display width are clipped by _clip().
+    """
     tft.fill(st7789.BLACK)
-    tft.text(font, title, _center_x(title), 45, st7789.WHITE, st7789.BLACK)
-    tft.text(font, detail, _center_x(detail), 72, _DIM, st7789.BLACK)
+    if detail2 is None:
+        rows = ((title, 45, st7789.WHITE), (detail, 72, _DIM))
+    else:
+        rows = ((title, 38, st7789.WHITE), (detail, 65, _DIM), (detail2, 92, _DIM))
+    for text, y, color in rows:
+        text = _clip(text)
+        tft.text(font, text, _center_x(text), y, color, st7789.BLACK)

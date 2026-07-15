@@ -331,7 +331,7 @@ The skeleton is API-agnostic. To point it at something else:
 | Symptom | Fix |
 |---|---|
 | **`Setup needed` on screen** | `src/config.py` is missing or still has placeholder values. Fill it in (step 3) and `make deploy`. |
-| **`No Wi-Fi` on screen** | Wrong SSID/password, or a 5 GHz network — the ESP32-S3 is 2.4 GHz only. Fix `src/config.py` and redeploy. |
+| **`No Wi-Fi` on screen** | The screen names the SSID it tried — confirm it matches your network. Usual causes: wrong SSID/password, or a 5 GHz network (the ESP32-S3 is 2.4 GHz only). Fix `src/config.py` and redeploy. |
 | **`Check API key` on screen** | OpenRouter rejected the key (401/403). Verify the key in `OPENROUTER_KEYS` at [openrouter.ai/settings/keys](https://openrouter.ai/settings/keys). |
 | **`API unreachable` on screen** | Transient network/OpenRouter hiccup; the dash keeps the last numbers and retries next cycle. Persistent? Check the REPL log (`make repl`). |
 | **Blank screen** | GPIO7 (power) and GPIO45 (backlight) must both be HIGH; `main.py` sets them. Also confirm your USB-C cable carries *data*, not charge-only. |

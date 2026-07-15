@@ -218,3 +218,44 @@ def test_render_footer_clock_and_pager_do_not_overlap():
     assert "@ 18:51" in tft.strings()
     assert "10/10" in tft.strings()
     _assert_no_overlap_on_row(tft, 112)
+
+
+# --- render_error: the no-data status screens ------------------------------------------
+
+
+def test_render_error_clears_and_shows_both_lines():
+    tft = FakeTFT()
+    dash.render_error(tft, "No Wi-Fi", "Check config.py")
+    assert tft.calls[0] == "fill"
+    strings = tft.strings()
+    assert "No Wi-Fi" in strings
+    assert "Check config.py" in strings
+
+
+def test_render_error_names_the_network_on_connect_failure():
+    # On a Wi-Fi failure we show which SSID we tried, so a wrong/typo'd or out-of-range
+    # network is obvious on the panel without attaching a serial console.
+    tft = FakeTFT()
+    dash.render_error(tft, "No Wi-Fi", "HomeNet", "Check config.py")
+    strings = tft.strings()
+    assert strings == ["No Wi-Fi", "HomeNet", "Check config.py"]
+
+
+def test_render_error_clips_a_long_ssid_to_the_display_width():
+    # SSIDs run up to 32 chars but a row fits 15; clip with a trailing '~' so it reads as
+    # truncated, and never let a glyph draw past the panel edge.
+    tft = FakeTFT()
+    dash.render_error(tft, "No Wi-Fi", "MyReallyLongNetworkName", "Check config.py")
+    ssid_line = tft.strings()[1]
+    assert len(ssid_line) == 15
+    assert ssid_line == "MyReallyLongNe~"
+
+
+def test_render_error_two_line_layout_is_unchanged():
+    # Regression: the default (setup/API-key/connecting) screens stay two-line at their
+    # original rows; only a passed third line reflows the block.
+    tft = FakeTFT()
+    dash.render_error(tft, "Setup needed", "Edit config.py")
+    rows = {s: y for (s, _x, y) in tft.texts}
+    assert rows["Setup needed"] == 45
+    assert rows["Edit config.py"] == 72

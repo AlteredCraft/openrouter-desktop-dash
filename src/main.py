@@ -162,8 +162,8 @@ def main():
     try:
         net.connect(ssid, password)
     except OSError as exc:
-        print("Wi-Fi failed:", exc)
-        dash.render_error(tft, "No Wi-Fi", "Check config.py")
+        print("Wi-Fi failed for", repr(ssid) + ":", exc)
+        dash.render_error(tft, "No Wi-Fi", ssid, "Check config.py")
         return
     net.sync_time()  # best-effort; the clock is cosmetic
 
