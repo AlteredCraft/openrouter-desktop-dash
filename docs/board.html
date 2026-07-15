@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>01 · Meet the board — Desk Dash field guide</title>
-<meta name="description" content="A guided tour of the Adafruit ESP32-S3 Reverse TFT Feather: the chip, the display, the buttons, power, and the pins this project actually uses.">
+<meta name="description" content="A guided tour of the Adafruit ESP32-S3 Reverse TFT Feather: the chip, the display, the buttons, power, and a reference pinout — though the only connection this project uses is USB-C.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%230b0e14'/%3E%3Crect x='2' y='3' width='12' height='8' rx='1' fill='%232fd8f2'/%3E%3Ccircle cx='5' cy='13.5' r='1' fill='%23667089'/%3E%3Ccircle cx='8' cy='13.5' r='1' fill='%23667089'/%3E%3Ccircle cx='11' cy='13.5' r='1' fill='%23667089'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -34,7 +34,8 @@
     <h1>Meet the board</h1>
     <p class="lede">The <b>Adafruit ESP32-S3 Reverse TFT Feather</b> (#5691) is a complete
     computer the size of two postage stamps: Wi-Fi, a color screen, three buttons, battery
-    charging — everything this project needs, with nothing to solder.</p>
+    charging — everything this project needs, with nothing to solder. One USB-C cable is the
+    only connection you'll ever make; every other pin and port on the board goes unused.</p>
   </div>
 </header>
 
@@ -44,7 +45,8 @@
     <img src="assets/img/board-display-flat.jpg" alt="Top-down view of the ESP32-S3 Reverse TFT Feather showing the 1.14 inch display, reset button on the left, and D0, D1, D2 buttons on the right" width="970" height="728">
     <figcaption><b>Display side.</b> The 1.14″ color TFT dominates the front, flanked by
     <b>Reset</b> (left) and the three user buttons <b>D0 / D1 / D2</b> (right). The two rows of
-    holes are the Feather-standard GPIO pins — unused by this project, free for your next one.</figcaption>
+    holes are the Feather-standard GPIO pins — like everything but the USB-C port, they're
+    unused by this project and free for your next one.</figcaption>
   </figure>
 
   <section>
@@ -92,7 +94,7 @@
     <p class="section-kicker">Field notes</p>
     <h2>Subsystems, up close</h2>
     <p class="mute">Everything the dash touches, in hardware form. Captions note the GPIO pins
-    you'll meet again in chapter 03.</p>
+    you'll meet again in chapter 03 — all internal board wiring, nothing you connect yourself.</p>
 
     <div class="gallery">
       <figure class="panel">
@@ -121,8 +123,9 @@
       <figure class="panel">
         <img src="assets/img/closeup-power.jpg" alt="Close-up of the USB-C port and battery connector" loading="lazy">
         <figcaption><b>Power.</b> USB-C for power + programming, plus a JST connector for an
-        optional LiPoly battery with onboard charging and a MAX17048 fuel gauge. For a desk
-        dashboard, USB-C alone is all you need.</figcaption>
+        optional LiPoly battery with onboard charging and a MAX17048 fuel gauge. USB-C is the
+        <em>only</em> connection the dash uses — power, programming, and file transfer all ride
+        that one cable; the battery connector, like every other port, goes unused.</figcaption>
       </figure>
       <figure class="panel">
         <img src="assets/img/closeup-stemma.jpg" alt="Close-up of the STEMMA QT connector" loading="lazy">
@@ -145,10 +148,12 @@
 
   <section>
     <p class="section-kicker">The map</p>
-    <h2>Pinout: the pins this project uses</h2>
-    <p class="mute">Every pad on the board has a GPIO number; firmware talks to hardware by
-    number. You don't need to memorize the map — you need to know it exists, and where the
-    handful of pins the dash uses live.</p>
+    <h2>Pinout: reference only — USB-C is the only connection</h2>
+    <p class="mute">First, the important part: <b>this project connects to nothing but the
+    USB-C port.</b> Every header pin, pad, and connector on the board goes unused — there is
+    nothing to wire, jumper, or solder. The map below is purely for reference: the display and
+    buttons are wired to GPIOs <em>inside</em> the board, and those numbers surface again in
+    the firmware (chapter 03).</p>
 
     <figure class="panel">
       <img src="assets/img/pinout-display-side.jpg" alt="Adafruit's official display-side pinout diagram of the ESP32-S3 Reverse TFT Feather" loading="lazy">
@@ -157,9 +162,13 @@
       <a href="https://learn.adafruit.com/esp32-s3-reverse-tft-feather/pinouts">learn-guide pinouts page</a>.</figcaption>
     </figure>
 
+    <p class="mute">Every signal in this table is internal board wiring between the ESP32-S3
+    and the onboard display, buttons, and LED — none of it involves a physical connection on
+    your part.</p>
+
     <div class="table-scroll">
       <table>
-        <thead><tr><th>Signal</th><th class="num">GPIO</th><th>Why the dash cares</th></tr></thead>
+        <thead><tr><th>Signal</th><th class="num">GPIO</th><th>Why the firmware cares</th></tr></thead>
         <tbody>
           <tr><td>SPI clock / data (SCK, MOSI)</td><td class="num">36 / 35</td><td>The display bus — pixels travel here at 40 MHz</td></tr>
           <tr><td>TFT CS / DC / RESET</td><td class="num">42 / 40 / 41</td><td>Display control lines the ST7789 driver toggles</td></tr>
@@ -185,7 +194,7 @@
     <div class="resources">
       <a class="res" href="https://www.adafruit.com/product/5691"><span class="t">Product page (#5691)</span><span class="d">Specs, price, stock — and more glamour shots</span></a>
       <a class="res" href="https://learn.adafruit.com/esp32-s3-reverse-tft-feather"><span class="t">Adafruit learn guide</span><span class="d">The board's official manual — this chapter in long form</span></a>
-      <a class="res" href="https://learn.adafruit.com/esp32-s3-reverse-tft-feather/pinouts"><span class="t">Full pinout reference</span><span class="d">Every pin, both sides, annotated</span></a>
+      <a class="res" href="https://learn.adafruit.com/esp32-s3-reverse-tft-feather/pinouts"><span class="t">Full pinout reference</span><span class="d">Every pin, both sides, annotated — reference only for this project</span></a>
       <a class="res" href="https://learn.adafruit.com/esp32-s3-reverse-tft-feather/downloads"><span class="t">Schematic &amp; CAD files</span><span class="d">For enclosure design or tracing a circuit</span></a>
       <a class="res" href="https://www.espressif.com/sites/default/files/documentation/esp32-s3_datasheet_en.pdf"><span class="t">ESP32-S3 datasheet (PDF)</span><span class="d">The chip itself, in 700 pages of detail</span></a>
       <a class="res" href="https://learn.adafruit.com/adafruit-feather/feather-specification"><span class="t">The Feather spec</span><span class="d">Why this board shape is an ecosystem</span></a>
