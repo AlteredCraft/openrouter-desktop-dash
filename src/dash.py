@@ -82,9 +82,9 @@ def render_account(tft, view, updated, wifi_ok, note=None):
     account credit balance and a burn bar (credits used of credits purchased).
 
     Mirrors render()'s layout so the toggle reads instantly, but the header is fixed to
-    'Account', the featured number is the balance ('Left'), and the bottom row shows a
-    key count instead of a pager. `note` replaces the clock with a short warning, exactly
-    as in render().
+    'Account', the featured number is credits used ('Used', the bar's numerator), and the
+    bottom row shows a key count instead of a pager. `note` replaces the clock with a short
+    warning, exactly as in render().
     """
     tft.fill(st7789.BLACK)
 
@@ -97,8 +97,12 @@ def render_account(tft, view, updated, wifi_ok, note=None):
     _row(tft, "Month", view["month"], 56)
 
     tft.hline(0, 74, _W, _DIM)
-    tft.text(font, "Left", 8, 76, st7789.WHITE, st7789.BLACK)
-    tft.text(font, usage_view.fmt_usd(view["balance"]), _VALUE_X, 76, st7789.CYAN, st7789.BLACK)
+    # Feature the credits *used* — the number the bar actually fills to — with the
+    # purchased-credits cap ('$20.00') drawn beside the gauge, so "$12.39 of $20.00" is
+    # self-evident. Remaining ('Left') is the gauge's unfilled portion; showing that
+    # figure here instead put a 38%-looking number next to a 62%-full bar and misread.
+    tft.text(font, "Used", 8, 76, st7789.WHITE, st7789.BLACK)
+    tft.text(font, usage_view.fmt_usd(view["used"]), _VALUE_X, 76, st7789.CYAN, st7789.BLACK)
 
     _budget_bar(tft, view["used_frac"], view["budget"], 8, 96, _W - 16, 10)
 

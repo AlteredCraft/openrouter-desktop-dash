@@ -123,11 +123,18 @@ def test_render_account_clears_and_headers():
     assert "Account" in tft.strings()
 
 
-def test_render_account_shows_balance_as_left():
+def test_render_account_features_used_with_cap():
+    # The featured number is the credits *used* — the value that actually drives the
+    # bar's fill — with the purchased-credits cap drawn beside the gauge so the ratio
+    # ("$12.40 of $20.00") is self-evident. Showing the remaining balance here instead
+    # sat a 38%-looking number next to a 62%-full "used" gauge and read as a mismatch.
     tft = FakeTFT()
     dash.render_account(tft, ACCOUNT_VIEW, "18:51", wifi_ok=True)
-    assert "Left" in tft.strings()
-    assert "$7.60" in tft.strings()  # the account balance
+    strings = tft.strings()
+    assert "Used" in strings
+    assert "$12.40" in strings   # total_usage — the bar's numerator
+    assert "$20.00" in strings   # total_credits — the bar's cap, beside the gauge
+    assert "Left" not in strings  # balance is now the gauge's empty portion, not a row
 
 
 def test_render_account_shows_summed_rows():
@@ -180,11 +187,15 @@ def test_render_account_many_keys_drops_count_not_the_clock():
 
 
 def test_render_account_without_budget_shows_no_limit():
-    # /credits failed: no budget to draw, but the summed rows still render.
+    # /credits failed: no budget/usage to draw, but the summed rows still render.
+    # build_account_view sets used (total_usage) to None alongside budget in this case,
+    # so the featured value degrades to "—" rather than a stale figure.
     tft = FakeTFT()
-    view = dict(ACCOUNT_VIEW, balance=None, budget=None, used_frac=None)
+    view = dict(ACCOUNT_VIEW, balance=None, budget=None, used=None, used_frac=None)
     dash.render_account(tft, view, "18:51", wifi_ok=True)
-    assert any("no limit" in s for s in tft.strings())
+    strings = tft.strings()
+    assert any("no limit" in s for s in strings)
+    assert "Used" in strings and "—" in strings
 
 
 # --- render: the per-key dash footer ----------------------------------------------------

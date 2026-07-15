@@ -56,11 +56,12 @@ page between them — **D1 = next, D2 = previous** — and a small `1/3` pager i
 shows which is active. Switching keys refreshes immediately.
 
 **Press D0 for the account overview.** D0 (the BOOT button) toggles between the per-key dash and
-a whole-account screen: **Today / Week / Month summed across every configured key**, plus your
-account credit **balance** (`total_credits − total_usage` from `/credits`) and a burn bar showing
-how much of your purchased credits you've spent. It's the one number the per-key screens hide once
-your keys have their own limits. Press D0 again to return; the same *Loading* emblem shows on every
-switch. The account rollup fetches each key, so it costs one round-trip per key on refresh.
+a whole-account screen: **Today / Week / Month summed across every configured key**, plus the
+account-wide **credits used** (`total_usage` from `/credits`) and a burn bar that fills toward your
+purchased-credits cap (`total_credits`) — so `$12.39 of $20.00` reads at a glance. The remaining
+balance (`total_credits − total_usage`) is the bar's unfilled portion. Press D0 again to return;
+the same *Loading* emblem shows on every switch. The account rollup fetches each key, so it costs
+one round-trip per key on refresh.
 
 It reads OpenRouter's `GET /api/v1/key` and `GET /api/v1/credits` using a normal (read-only)
 inference API key — **not** a management/provisioning key. See
@@ -92,8 +93,8 @@ also the account toggle), **D1** (next key), **D2** (previous key).
           ● Wi-Fi dot   1/3 pager = selected key
 ```
 
-**2. Account overview** — press **D0**. Rows are summed across *all* keys; `Left`/bar are the
-account-wide balance and burn from `/credits`.
+**2. Account overview** — press **D0**. Rows are summed across *all* keys; `Used`/bar are the
+account-wide credits burned against your purchased-credits cap from `/credits`.
 
 ```
         ╔═══════════════════════════════════╗
@@ -104,14 +105,15 @@ account-wide balance and burn from `/credits`.
         ║ │ Week                    $2.60 │ ║
         ║ │ Month                   $9.80 │ ║
         ║ ├───────────────────────────────┤ ║
-        ║ │ Left                    $7.61 │ ║
+        ║ │ Used                   $12.39 │ ║
         ║ │ [██████████░░░░░░░]    $20.00 │ ║
         ║ │ @ 18:51                2 keys │ ║
         ║ └───────────────────────────────┘ ║
         ║     ◉ D0      ◉ D1      ◉ D2      ║
         ╚═══════════════════════════════════╝
           Today/Week/Month summed across ALL keys
-          Left = account balance   bar = credits burned (62%)
+          Used = credits burned   bar = 62% of the $20.00 cap
+          balance left ($7.61) is the bar's unfilled part
           press D0 again to return to the per-key dash
 ```
 
@@ -269,7 +271,8 @@ OPENROUTER_KEYS = [
   at both ends. A `1/3` pager in the bottom-right corner marks the current key, and each key's
   `name` shows in the header. Switching refreshes that key's usage right away.
 - **D0** (GPIO0, the BOOT button) toggles the [account overview](#screens) — Today/Week/Month
-  summed across every key here, plus your account credit balance. It works with one key too.
+  summed across every key here, plus account-wide credits used and a burn bar. It works with one
+  key too.
 - Each entry is an ordinary read-only inference key. `name` is optional (it falls back to
   `OpenRouter`), but naming your keys is what makes toggling useful. With just one key
   configured D1/D2 do nothing and no pager is drawn.
