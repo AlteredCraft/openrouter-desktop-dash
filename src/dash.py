@@ -27,6 +27,11 @@ _BAR_COLORS = {
 # for amounts up to "$9999.99" (8 chars = 128px) without running past the 240px edge.
 _VALUE_X = 104
 
+# Last-refresh stamp, bottom-left: "@ 18:51". The footer row fits 14 cells between the
+# 8px gutters; a longer prefix ("upd ") left no room for the account screen's right-
+# aligned "2 keys" tag, whose first cell landed on the clock's last digit.
+_CLOCK_PREFIX = "@ "
+
 
 def _row(tft, label, value, y):
     tft.text(font, label, 8, y, st7789.WHITE, st7789.BLACK)
@@ -66,7 +71,7 @@ def render(tft, view, updated, wifi_ok, note=None, page=None):
         # overlapping it — the header key name still shows which key is selected.
         tft.text(font, note, 8, 112, st7789.YELLOW, st7789.BLACK)
     else:
-        tft.text(font, "upd " + updated, 8, 112, _DIM, st7789.BLACK)
+        tft.text(font, _CLOCK_PREFIX + updated, 8, 112, _DIM, st7789.BLACK)
         if page and page[1] > 1:
             pager = "%d/%d" % page
             tft.text(font, pager, _W - len(pager) * _CHAR - 8, 112, _DIM, st7789.BLACK)
@@ -100,11 +105,16 @@ def render_account(tft, view, updated, wifi_ok, note=None):
     if note:
         tft.text(font, note, 8, 112, st7789.YELLOW, st7789.BLACK)
     else:
-        tft.text(font, "upd " + updated, 8, 112, _DIM, st7789.BLACK)
+        clock = _CLOCK_PREFIX + updated
+        tft.text(font, clock, 8, 112, _DIM, st7789.BLACK)
         count = view.get("key_count")
         if count:
+            # Right-aligned key count, drawn only if it clears the clock by a full
+            # cell — a double-digit count ("10 keys") would otherwise run into it.
             tag = "1 key" if count == 1 else "%d keys" % count
-            tft.text(font, tag, _W - len(tag) * _CHAR - 8, 112, _DIM, st7789.BLACK)
+            x = _W - len(tag) * _CHAR - 8
+            if x >= 8 + (len(clock) + 1) * _CHAR:
+                tft.text(font, tag, x, 112, _DIM, st7789.BLACK)
 
 
 def _budget_bar(tft, used_frac, budget, x, y, w, h):

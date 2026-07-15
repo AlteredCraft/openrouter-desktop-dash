@@ -36,6 +36,13 @@ class FakeTFT:
         return [s for (s, _x, _y) in self.texts]
 
 
+def _assert_no_overlap_on_row(tft, y):
+    """No two texts on row `y` may overlap, given the 16px-per-char font metric."""
+    spans = sorted((x, x + 16 * len(s), s) for (s, x, row) in tft.texts if row == y)
+    for (_, a_end, a), (b_start, _, b) in zip(spans, spans[1:]):
+        assert a_end <= b_start, "%r overlaps %r" % (a, b)
+
+
 def test_render_loading_clears_before_drawing():
     # Clearing first wipes the previous key's numbers so nothing stale lingers.
     tft = FakeTFT()
@@ -148,7 +155,28 @@ def test_render_account_note_replaces_clock():
     dash.render_account(tft, ACCOUNT_VIEW, "18:51", wifi_ok=False, note="API unreachable")
     strings = tft.strings()
     assert "API unreachable" in strings
-    assert not any("upd" in s for s in strings)
+    assert not any("18:51" in s for s in strings)
+
+
+def test_render_account_footer_fits_on_one_row():
+    # Regression: the old "upd 18:51" clock (9 cells, ending at x=152) collided with
+    # the right-aligned "2 keys" tag (starting at x=136) — the tag's first character
+    # overwrote the clock's last digit on the real panel.
+    tft = FakeTFT()
+    dash.render_account(tft, ACCOUNT_VIEW, "18:51", wifi_ok=True)
+    assert "@ 18:51" in tft.strings()
+    assert "2 keys" in tft.strings()
+    _assert_no_overlap_on_row(tft, 112)
+
+
+def test_render_account_many_keys_drops_count_not_the_clock():
+    # "10 keys" can't clear the clock; it's skipped rather than drawn on top of it.
+    tft = FakeTFT()
+    dash.render_account(tft, dict(ACCOUNT_VIEW, key_count=10), "18:51", wifi_ok=True)
+    strings = tft.strings()
+    assert "@ 18:51" in strings
+    assert not any("keys" in s for s in strings)
+    _assert_no_overlap_on_row(tft, 112)
 
 
 def test_render_account_without_budget_shows_no_limit():
@@ -157,3 +185,25 @@ def test_render_account_without_budget_shows_no_limit():
     view = dict(ACCOUNT_VIEW, balance=None, budget=None, used_frac=None)
     dash.render_account(tft, view, "18:51", wifi_ok=True)
     assert any("no limit" in s for s in tft.strings())
+
+
+# --- render: the per-key dash footer ----------------------------------------------------
+
+KEY_VIEW = {
+    "title": "warp",
+    "today": 0.35,
+    "week": 1.2,
+    "month": 4.5,
+    "used": 0.35,
+    "budget": 20.0,
+    "used_frac": 0.0175,
+}
+
+
+def test_render_footer_clock_and_pager_do_not_overlap():
+    # Worst realistic pager ("10/10", 5 cells) beside the clock on the footer row.
+    tft = FakeTFT()
+    dash.render(tft, KEY_VIEW, "18:51", wifi_ok=True, page=(10, 10))
+    assert "@ 18:51" in tft.strings()
+    assert "10/10" in tft.strings()
+    _assert_no_overlap_on_row(tft, 112)

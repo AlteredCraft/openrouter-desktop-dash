@@ -69,7 +69,7 @@
               <rect x="8" y="96" width="3" height="10" fill="#34d97b"/>
               <rect x="8.5" y="96.5" width="121" height="9" fill="none" stroke="#4b5266"/>
               <text class="tft-t dim" x="136" y="106" textLength="96" lengthAdjust="spacingAndGlyphs">$20.00</text>
-              <text class="tft-t dim" x="8" y="125" textLength="144" lengthAdjust="spacingAndGlyphs">upd 18:51</text>
+              <text class="tft-t dim" x="8" y="125" textLength="112" lengthAdjust="spacingAndGlyphs">@ 18:51</text>
               <text class="tft-t dim" x="184" y="125" textLength="48" lengthAdjust="spacingAndGlyphs">1/3</text>
             </svg>
           </div>
@@ -102,7 +102,7 @@
               <rect x="8" y="96" width="75" height="10" fill="#ffa02e"/>
               <rect x="8.5" y="96.5" width="121" height="9" fill="none" stroke="#4b5266"/>
               <text class="tft-t dim" x="136" y="106" textLength="96" lengthAdjust="spacingAndGlyphs">$20.00</text>
-              <text class="tft-t dim" x="8" y="125" textLength="126" lengthAdjust="spacingAndGlyphs">upd 18:51</text>
+              <text class="tft-t dim" x="8" y="125" textLength="112" lengthAdjust="spacingAndGlyphs">@ 18:51</text>
               <text class="tft-t dim" x="136" y="125" textLength="96" lengthAdjust="spacingAndGlyphs">2 keys</text>
             </svg>
           </div>
@@ -238,10 +238,10 @@
 
     <div class="callout">
       <span class="sign">Why it matters</span>
-      <p>The two green-outlined modules import <b>nothing hardware-specific</b>, so
-      <code>make test</code> runs <b>70 pytest cases</b> against them on your laptop — no board
-      plugged in. Most of the app's actual decisions (parsing, formatting, fallbacks, key
-      cycling) live exactly there.</p>
+      <p>The two green-outlined modules import <b>nothing hardware-specific</b> — and even the
+      renderer is exercised against a fake display — so <code>make test</code> runs
+      <b>73 pytest cases</b> on your laptop with no board plugged in. Most of the app's actual
+      decisions (parsing, formatting, fallbacks, key cycling) live in that pure core.</p>
     </div>
 
     <h3>File-by-file</h3>
@@ -258,7 +258,7 @@
           <tr><td><code>buttons.py</code></td><td>Debounced button reads; hides the D0-vs-D1/D2 wiring difference</td><td>board</td></tr>
           <tr><td><code>config.py</code></td><td>Your Wi-Fi + keys (gitignored; copied from <code>config.example.py</code>)</td><td>board</td></tr>
           <tr><td><code>urequests.py</code> · <code>st7789py.py</code> · <code>vga2_bold_16x16.py</code></td><td>Vendored HTTP client, display driver, bitmap font (MIT)</td><td>board</td></tr>
-          <tr><td><code>tests/</code></td><td>70 host-side pytest cases for the pure modules</td><td>laptop only</td></tr>
+          <tr><td><code>tests/</code></td><td>73 host-side pytest cases: the pure modules, plus the renderer against a fake TFT</td><td>laptop only</td></tr>
         </tbody>
       </table>
     </div>
@@ -390,7 +390,7 @@ $ make test</code></pre>
       <a class="res" href="https://openrouter.ai/docs"><span class="t">OpenRouter API docs</span><span class="d">The /key and /credits endpoints behind the numbers</span></a>
       <a class="res" href="https://github.com/russhughes/st7789py_mpy"><span class="t">st7789py_mpy</span><span class="d">The vendored display driver — fonts, shapes, more examples</span></a>
       <a class="res" href="https://github.com/micropython/micropython-lib"><span class="t">micropython-lib</span><span class="d">Where the vendored urequests HTTP client comes from</span></a>
-      <a class="res" href="https://github.com/AlteredCraft/openrouter-desktop-dash/tree/main/tests"><span class="t">The test suite</span><span class="d">70 cases showing exactly how the pure core behaves</span></a>
+      <a class="res" href="https://github.com/AlteredCraft/openrouter-desktop-dash/tree/main/tests"><span class="t">The test suite</span><span class="d">73 cases showing exactly how the pure core behaves</span></a>
     </div>
   </section>
 
