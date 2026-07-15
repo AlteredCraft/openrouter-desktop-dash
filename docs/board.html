@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>01 · Meet the board — Desk Dash field guide</title>
+<meta name="description" content="A guided tour of the Adafruit ESP32-S3 Reverse TFT Feather: the chip, the display, the buttons, power, and the pins this project actually uses.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%230b0e14'/%3E%3Crect x='2' y='3' width='12' height='8' rx='1' fill='%232fd8f2'/%3E%3Ccircle cx='5' cy='13.5' r='1' fill='%23667089'/%3E%3Ccircle cx='8' cy='13.5' r='1' fill='%23667089'/%3E%3Ccircle cx='11' cy='13.5' r='1' fill='%23667089'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="wrap">
+    <a class="nav-logo" href="index.html"><span class="tick">▚</span> desk-dash · field guide</a>
+    <div class="nav-links">
+      <a class="active" href="board.html"><span class="n">01</span><span class="label">The Board</span></a>
+      <a href="micropython.html"><span class="n">02</span><span class="label">MicroPython</span></a>
+      <a href="app.html"><span class="n">03</span><span class="label">The App</span></a>
+      <a class="nav-gh" href="https://github.com/AlteredCraft/openrouter-desktop-dash" title="Source on GitHub">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        <span class="label">GitHub</span>
+      </a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="kicker"><span class="chnum">Chapter 01 ·</span> Hardware</p>
+    <h1>Meet the board</h1>
+    <p class="lede">The <b>Adafruit ESP32-S3 Reverse TFT Feather</b> (#5691) is a complete
+    computer the size of two postage stamps: Wi-Fi, a color screen, three buttons, battery
+    charging — everything this project needs, with nothing to solder.</p>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <figure class="panel">
+    <img src="assets/img/board-display-flat.jpg" alt="Top-down view of the ESP32-S3 Reverse TFT Feather showing the 1.14 inch display, reset button on the left, and D0, D1, D2 buttons on the right" width="970" height="728">
+    <figcaption><b>Display side.</b> The 1.14″ color TFT dominates the front, flanked by
+    <b>Reset</b> (left) and the three user buttons <b>D0 / D1 / D2</b> (right). The two rows of
+    holes are the Feather-standard GPIO pins — unused by this project, free for your next one.</figcaption>
+  </figure>
+
+  <section>
+    <p class="section-kicker">Vital statistics</p>
+    <h2>The 30-second tour</h2>
+    <div class="grid cols-4">
+      <div class="spec"><span class="v">ESP32-S3</span><span class="k">2× cores @ 240 MHz</span></div>
+      <div class="spec"><span class="v">4 MB + 2 MB</span><span class="k">Flash + PSRAM</span></div>
+      <div class="spec"><span class="v">2.4 GHz</span><span class="k">Wi-Fi + BLE 5</span></div>
+      <div class="spec"><span class="v">240 × 135</span><span class="k">Color TFT (ST7789)</span></div>
+      <div class="spec"><span class="v">3 + 1</span><span class="k">User buttons + reset</span></div>
+      <div class="spec"><span class="v">USB-C</span><span class="k">Native USB, no adapter chip</span></div>
+      <div class="spec"><span class="v">LiPoly</span><span class="k">Charger + fuel gauge</span></div>
+      <div class="spec"><span class="v">STEMMA QT</span><span class="k">Plug-and-play I²C port</span></div>
+    </div>
+    <p class="mute">The ESP32-S3 is Espressif's Wi-Fi microcontroller — the same family that powers
+    a huge share of the world's smart plugs and IoT gadgets. Two Xtensa cores at 240 MHz and
+    megabytes of RAM is <em>lavish</em> by microcontroller standards, and exactly why it runs
+    Python comfortably (chapter 02).</p>
+  </section>
+
+  <section>
+    <p class="section-kicker">Naming things</p>
+    <h2>Why “Reverse”? Why “Feather”?</h2>
+    <div class="split">
+      <figure class="panel" style="margin:0">
+        <img src="assets/img/both-sides.jpg" alt="Both sides of the board: display side on the left, component side with the ESP32-S3 module on the right" loading="lazy">
+        <figcaption><b>Two-faced by design.</b> Display side (left) and component side (right).
+        All the electronics live on the back so the front is pure screen.</figcaption>
+      </figure>
+      <div>
+        <p><b>Feather</b> is Adafruit's standard board shape — a shared
+        <a href="https://learn.adafruit.com/adafruit-feather/feather-specification">form-factor spec</a>
+        with a fixed pin layout, so hundreds of boards and stackable “FeatherWing” add-ons
+        are interchangeable, like LEGO for electronics.</p>
+        <p>A regular TFT Feather puts the screen on the same side as the chips. The
+        <b>Reverse</b> edition flips it to the opposite side, so you can mount the board flat
+        against a case or stand and still face the display — perfect for a desk gadget
+        that's all screen.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="section-kicker">Field notes</p>
+    <h2>Subsystems, up close</h2>
+    <p class="mute">Everything the dash touches, in hardware form. Captions note the GPIO pins
+    you'll meet again in chapter 03.</p>
+
+    <div class="gallery">
+      <figure class="panel">
+        <img src="assets/img/closeup-esp32s3.jpg" alt="Close-up of the ESP32-S3 module with its metal shield and printed antenna" loading="lazy">
+        <figcaption><b>The brain.</b> An ESP32-S3 module: CPU, radio, flash and PSRAM under one
+        metal can, with the Wi-Fi antenna printed on the black overhang at the board's edge.</figcaption>
+      </figure>
+      <figure class="panel">
+        <img src="assets/img/closeup-tft.jpg" alt="Close-up of the 1.14 inch color TFT display" loading="lazy">
+        <figcaption><b>The face.</b> A 1.14″ IPS TFT, 240×135 pixels, driven by an ST7789
+        controller over SPI. Its power rail hangs off <code>GPIO7</code> and its backlight off
+        <code>GPIO45</code> — both must be driven HIGH before you see anything.</figcaption>
+      </figure>
+      <figure class="panel">
+        <img src="assets/img/closeup-d1d2.jpg" alt="Close-up of the D1 and D2 buttons" loading="lazy">
+        <figcaption><b>Inputs, part 1.</b> <code>D1</code> (GPIO1) and <code>D2</code> (GPIO2)
+        are simple push-buttons that read HIGH when pressed. The dash uses them to page
+        between API keys.</figcaption>
+      </figure>
+      <figure class="panel">
+        <img src="assets/img/closeup-d0.jpg" alt="Close-up of the D0 boot button" loading="lazy">
+        <figcaption><b>Inputs, part 2.</b> <code>D0</code> (GPIO0) is wired the opposite way —
+        it reads LOW when pressed — because it doubles as the <b>BOOT</b> button that puts the
+        chip into firmware-flashing mode. In the dash it toggles the account overview.</figcaption>
+      </figure>
+      <figure class="panel">
+        <img src="assets/img/closeup-power.jpg" alt="Close-up of the USB-C port and battery connector" loading="lazy">
+        <figcaption><b>Power.</b> USB-C for power + programming, plus a JST connector for an
+        optional LiPoly battery with onboard charging and a MAX17048 fuel gauge. For a desk
+        dashboard, USB-C alone is all you need.</figcaption>
+      </figure>
+      <figure class="panel">
+        <img src="assets/img/closeup-stemma.jpg" alt="Close-up of the STEMMA QT connector" loading="lazy">
+        <figcaption><b>Expansion.</b> The STEMMA QT port chains I²C sensors with a cable — no
+        soldering. Unused by the dash, but a one-plug upgrade path (air quality on your spend
+        monitor, anyone?).</figcaption>
+      </figure>
+      <figure class="panel">
+        <img src="assets/img/closeup-neopixel.jpg" alt="Close-up of the NeoPixel RGB LED" loading="lazy">
+        <figcaption><b>The blinky bit.</b> One NeoPixel RGB LED (data <code>GPIO33</code>,
+        power gate <code>GPIO21</code>) — your “hello, world” in chapter 02.</figcaption>
+      </figure>
+      <figure class="panel">
+        <img src="assets/img/board-quarter.jpg" alt="The board next to a US quarter for scale" loading="lazy">
+        <figcaption><b>For scale.</b> 50.8 × 22.8 mm — a full computer with a screen,
+        barely two coins long.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <p class="section-kicker">The map</p>
+    <h2>Pinout: the pins this project uses</h2>
+    <p class="mute">Every pad on the board has a GPIO number; firmware talks to hardware by
+    number. You don't need to memorize the map — you need to know it exists, and where the
+    handful of pins the dash uses live.</p>
+
+    <figure class="panel">
+      <img src="assets/img/pinout-display-side.jpg" alt="Adafruit's official display-side pinout diagram of the ESP32-S3 Reverse TFT Feather" loading="lazy">
+      <figcaption><b>Adafruit's official display-side pinout.</b> The component side has its own
+      diagram — both live in the
+      <a href="https://learn.adafruit.com/esp32-s3-reverse-tft-feather/pinouts">learn-guide pinouts page</a>.</figcaption>
+    </figure>
+
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Signal</th><th class="num">GPIO</th><th>Why the dash cares</th></tr></thead>
+        <tbody>
+          <tr><td>SPI clock / data (SCK, MOSI)</td><td class="num">36 / 35</td><td>The display bus — pixels travel here at 40 MHz</td></tr>
+          <tr><td>TFT CS / DC / RESET</td><td class="num">42 / 40 / 41</td><td>Display control lines the ST7789 driver toggles</td></tr>
+          <tr><td>TFT backlight</td><td class="num">45</td><td>HIGH = screen lit</td></tr>
+          <tr><td>TFT + I²C power rail</td><td class="num">7</td><td><b>Must be HIGH or the display is dead</b> — the classic “blank screen” gotcha</td></tr>
+          <tr><td>Buttons D0 / D1 / D2</td><td class="num">0 / 1 / 2</td><td>D0 reads LOW when pressed (it's also BOOT); D1/D2 read HIGH</td></tr>
+          <tr><td>NeoPixel data / power</td><td class="num">33 / 21</td><td>Not used by the dash — but used by you, next chapter</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout">
+      <span class="sign">Field tip</span>
+      <p>Two pins on this board are <b>power gates</b>, not signals: GPIO7 (display + STEMMA rail)
+      and GPIO21 (NeoPixel). Adafruit gates these rails so battery projects can cut power to
+      save energy — the price is that <em>you</em> must switch them on in software first.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="section-kicker">Go deeper</p>
+    <h2>Bookmark these</h2>
+    <div class="resources">
+      <a class="res" href="https://www.adafruit.com/product/5691"><span class="t">Product page (#5691)</span><span class="d">Specs, price, stock — and more glamour shots</span></a>
+      <a class="res" href="https://learn.adafruit.com/esp32-s3-reverse-tft-feather"><span class="t">Adafruit learn guide</span><span class="d">The board's official manual — this chapter in long form</span></a>
+      <a class="res" href="https://learn.adafruit.com/esp32-s3-reverse-tft-feather/pinouts"><span class="t">Full pinout reference</span><span class="d">Every pin, both sides, annotated</span></a>
+      <a class="res" href="https://learn.adafruit.com/esp32-s3-reverse-tft-feather/downloads"><span class="t">Schematic &amp; CAD files</span><span class="d">For enclosure design or tracing a circuit</span></a>
+      <a class="res" href="https://www.espressif.com/sites/default/files/documentation/esp32-s3_datasheet_en.pdf"><span class="t">ESP32-S3 datasheet (PDF)</span><span class="d">The chip itself, in 700 pages of detail</span></a>
+      <a class="res" href="https://learn.adafruit.com/adafruit-feather/feather-specification"><span class="t">The Feather spec</span><span class="d">Why this board shape is an ecosystem</span></a>
+    </div>
+  </section>
+
+  <div class="pager">
+    <a class="next" href="micropython.html"><span class="dir">Next · Chapter 02</span><span class="to">Python on bare metal →</span></a>
+  </div>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Companion guide to <a href="https://github.com/AlteredCraft/openrouter-desktop-dash">openrouter-desktop-dash</a> (MIT licensed).</p>
+    <p>Board photography and pinout diagrams © Adafruit Industries, from the
+    <a href="https://learn.adafruit.com/esp32-s3-reverse-tft-feather">Adafruit Learning System guide</a>
+    for this board, used with attribution (CC BY-SA 3.0).</p>
+  </div>
+</footer>
+
+</body>
+</html>

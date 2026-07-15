@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desk Dash — a field guide to the ESP32-S3 Reverse TFT Feather</title>
+<meta name="description" content="A visual field guide for programmers who are new to microcontrollers: the Adafruit ESP32-S3 Reverse TFT Feather, MicroPython, and a tiny always-on OpenRouter spend dashboard.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%230b0e14'/%3E%3Crect x='2' y='3' width='12' height='8' rx='1' fill='%232fd8f2'/%3E%3Ccircle cx='5' cy='13.5' r='1' fill='%23667089'/%3E%3Ccircle cx='8' cy='13.5' r='1' fill='%23667089'/%3E%3Ccircle cx='11' cy='13.5' r='1' fill='%23667089'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="wrap">
+    <a class="nav-logo" href="index.html"><span class="tick">▚</span> desk-dash · field guide</a>
+    <div class="nav-links">
+      <a href="board.html"><span class="n">01</span><span class="label">The Board</span></a>
+      <a href="micropython.html"><span class="n">02</span><span class="label">MicroPython</span></a>
+      <a href="app.html"><span class="n">03</span><span class="label">The App</span></a>
+      <a class="nav-gh" href="https://github.com/AlteredCraft/openrouter-desktop-dash" title="Source on GitHub">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        <span class="label">GitHub</span>
+      </a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="kicker">A field guide · ESP32-S3 + MicroPython + one cloud API</p>
+    <h1>Build a palm-sized dashboard<br>that watches your AI spend.</h1>
+    <p class="lede">You already know Python. This guide adds the missing half: a <b>$25 Wi-Fi
+    microcontroller with a built-in color screen</b>, the firmware that runs real Python on it,
+    and a complete worked app — an always-on desk gadget that shows your
+    <a href="https://openrouter.ai">OpenRouter</a> API usage in real time.</p>
+    <div class="cta-row">
+      <a class="btn primary" href="board.html">Start with the board →</a>
+      <a class="btn" href="https://github.com/AlteredCraft/openrouter-desktop-dash">Browse the source</a>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section>
+    <div class="split">
+      <figure class="panel" style="margin:0">
+        <img src="assets/img/board-display-angle.jpg" alt="The Adafruit ESP32-S3 Reverse TFT Feather: a small black circuit board with a color display and three buttons labeled D0, D1 and D2" width="970" height="728">
+        <figcaption><b>The hardware.</b> Adafruit's ESP32-S3 Reverse TFT Feather — a dual-core
+        Wi-Fi chip, a 240×135 color display, and three buttons on a board smaller than a
+        USB stick box.</figcaption>
+      </figure>
+      <div>
+        <div class="device small">
+          <div class="screen">
+            <svg viewBox="0 0 240 135" role="img" aria-label="The dashboard screen: Today, Week and Month spend rows, plus a budget bar">
+              <rect width="240" height="135" fill="#000"/>
+              <text class="tft-t" x="8" y="13" textLength="64" lengthAdjust="spacingAndGlyphs">warp</text>
+              <rect x="224" y="2" width="12" height="12" fill="#34d97b"/>
+              <line x1="0" y1="18.5" x2="240" y2="18.5" stroke="#4b5266"/>
+              <text class="tft-t" x="8" y="33" textLength="80" lengthAdjust="spacingAndGlyphs">Today</text>
+              <text class="tft-t cyan" x="104" y="33" textLength="80" lengthAdjust="spacingAndGlyphs">$0.35</text>
+              <text class="tft-t" x="8" y="51" textLength="64" lengthAdjust="spacingAndGlyphs">Week</text>
+              <text class="tft-t cyan" x="104" y="51" textLength="80" lengthAdjust="spacingAndGlyphs">$1.20</text>
+              <text class="tft-t" x="8" y="69" textLength="80" lengthAdjust="spacingAndGlyphs">Month</text>
+              <text class="tft-t cyan" x="104" y="69" textLength="80" lengthAdjust="spacingAndGlyphs">$4.50</text>
+              <line x1="0" y1="74.5" x2="240" y2="74.5" stroke="#4b5266"/>
+              <text class="tft-t" x="8" y="89" textLength="64" lengthAdjust="spacingAndGlyphs">Used</text>
+              <text class="tft-t cyan" x="104" y="89" textLength="80" lengthAdjust="spacingAndGlyphs">$0.35</text>
+              <rect x="8" y="96" width="122" height="10" fill="#20242e"/>
+              <rect x="8" y="96" width="3" height="10" fill="#34d97b"/>
+              <rect x="8.5" y="96.5" width="121" height="9" fill="none" stroke="#4b5266"/>
+              <text class="tft-t dim" x="136" y="106" textLength="96" lengthAdjust="spacingAndGlyphs">$20.00</text>
+              <text class="tft-t dim" x="8" y="125" textLength="144" lengthAdjust="spacingAndGlyphs">upd 18:51</text>
+              <text class="tft-t dim" x="184" y="125" textLength="48" lengthAdjust="spacingAndGlyphs">1/3</text>
+            </svg>
+          </div>
+          <div class="btn-row"><span>D0</span><span>D1</span><span>D2</span></div>
+        </div>
+        <p class="device-caption"><b>The software.</b> Plug it in and it joins Wi-Fi, calls
+        OpenRouter over HTTPS, and paints today / week / month spend plus a
+        green→orange→red budget bar — refreshing itself every minute, forever.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <p class="section-kicker">The route</p>
+    <h2>Three short chapters</h2>
+    <p class="mute">Each one is crisp on purpose — enough to be dangerous, with links out to the
+    official docs when you want the deep end.</p>
+
+    <div class="chapters">
+      <a class="chapter-card" href="board.html">
+        <img src="assets/img/board-display-flat.jpg" alt="Top-down view of the display side of the Feather board" loading="lazy">
+        <div class="body">
+          <span class="num">CHAPTER 01</span>
+          <h3>Meet the board</h3>
+          <p>The Reverse TFT Feather, subsystem by subsystem: the ESP32-S3 chip, the screen,
+          the buttons, the pins — and why it's called “Reverse”.</p>
+          <span class="go">read →</span>
+        </div>
+      </a>
+      <a class="chapter-card" href="micropython.html">
+        <img src="assets/img/board-components.jpg" alt="Component side of the board showing the ESP32-S3 module and USB-C port" loading="lazy">
+        <div class="body">
+          <span class="num">CHAPTER 02</span>
+          <h3>Python on bare metal</h3>
+          <p>Flash MicroPython, say hello over the REPL, and learn the mental-model shifts
+          and the edit → deploy loop that make board work feel like normal Python.</p>
+          <span class="go">read →</span>
+        </div>
+      </a>
+      <a class="chapter-card" href="app.html">
+        <img src="assets/img/closeup-tft.jpg" alt="Close-up of the 1.14 inch TFT display" loading="lazy">
+        <div class="body">
+          <span class="num">CHAPTER 03</span>
+          <h3>Tour the app</h3>
+          <p>How ~800 lines of Python become an always-on spend monitor: the screens, the
+          architecture, the main loop — and how to remix it into your own gadget.</p>
+          <span class="go">read →</span>
+        </div>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <p class="section-kicker">Pack list</p>
+    <h2>What you'll need</h2>
+    <div class="grid cols-3">
+      <div class="card"><span class="ic">Hardware</span><h4>The board</h4>
+        <p><a href="https://www.adafruit.com/product/5691">Adafruit ESP32-S3 Reverse TFT Feather</a>
+        (product #5691, ~$25). Display, buttons and Wi-Fi are all built in — no soldering, no wiring.</p></div>
+      <div class="card"><span class="ic">Hardware</span><h4>A USB-C data cable</h4>
+        <p>Many USB-C cables are charge-only. You need one that carries data — it's the #1
+        “my board doesn't show up” cause.</p></div>
+      <div class="card"><span class="ic">Network</span><h4>2.4 GHz Wi-Fi</h4>
+        <p>The ESP32-S3 has no 5 GHz radio. Most routers broadcast both; you just need the
+        2.4 GHz network's name and password.</p></div>
+      <div class="card"><span class="ic">Cloud</span><h4>An OpenRouter key</h4>
+        <p>A normal (read-only is fine) inference API key from
+        <a href="https://openrouter.ai/settings/keys">openrouter.ai/settings/keys</a>.
+        The dash only ever <em>reads</em> usage.</p></div>
+      <div class="card"><span class="ic">Laptop</span><h4>uv</h4>
+        <p><a href="https://docs.astral.sh/uv/">uv</a> installs the two command-line tools you'll
+        use (<code>esptool</code>, <code>mpremote</code>) and the host-side test toolchain.</p></div>
+      <div class="card"><span class="ic">You</span><h4>Working Python</h4>
+        <p>No electronics experience required. If you can read a <code>while</code> loop and a
+        dict, you're qualified.</p></div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Companion guide to <a href="https://github.com/AlteredCraft/openrouter-desktop-dash">openrouter-desktop-dash</a> (MIT licensed).</p>
+    <p>Board photography and pinout diagrams © Adafruit Industries, from the
+    <a href="https://learn.adafruit.com/esp32-s3-reverse-tft-feather">Adafruit Learning System guide</a>
+    for this board, used with attribution (CC BY-SA 3.0). Adafruit did not sponsor or endorse this project — we just like the board.</p>
+  </div>
+</footer>
+
+</body>
+</html>

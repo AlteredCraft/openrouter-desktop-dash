@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>02 · Python on bare metal — Desk Dash field guide</title>
+<meta name="description" content="MicroPython for people who already know Python: the mental model, flashing the firmware, the REPL, and the edit-deploy loop on the ESP32-S3 Reverse TFT Feather.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%230b0e14'/%3E%3Crect x='2' y='3' width='12' height='8' rx='1' fill='%232fd8f2'/%3E%3Ccircle cx='5' cy='13.5' r='1' fill='%23667089'/%3E%3Ccircle cx='8' cy='13.5' r='1' fill='%23667089'/%3E%3Ccircle cx='11' cy='13.5' r='1' fill='%23667089'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="wrap">
+    <a class="nav-logo" href="index.html"><span class="tick">▚</span> desk-dash · field guide</a>
+    <div class="nav-links">
+      <a href="board.html"><span class="n">01</span><span class="label">The Board</span></a>
+      <a class="active" href="micropython.html"><span class="n">02</span><span class="label">MicroPython</span></a>
+      <a href="app.html"><span class="n">03</span><span class="label">The App</span></a>
+      <a class="nav-gh" href="https://github.com/AlteredCraft/openrouter-desktop-dash" title="Source on GitHub">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        <span class="label">GitHub</span>
+      </a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="kicker"><span class="chnum">Chapter 02 ·</span> Firmware</p>
+    <h1>Python on bare metal</h1>
+    <p class="lede"><a href="https://micropython.org">MicroPython</a> is a lean implementation of
+    Python 3 that runs <b>directly on the chip</b> — no OS, no virtualenv, no container.
+    Your <code>while</code> loops, dicts and <code>import</code>s all work; what changes is
+    <em>where the code lives and how it starts</em>.</p>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section>
+    <p class="section-kicker">Recalibrate</p>
+    <h2>Five mental-model shifts</h2>
+    <p class="mute">If you internalize these, everything else in embedded Python is just details.</p>
+    <div class="grid cols-3">
+      <div class="card"><span class="ic">Shift 1</span><h4>The board has its own filesystem</h4>
+        <p>A small flash drive inside the chip. Your code runs <em>there</em>, not on your laptop —
+        you edit locally, then <b>copy files over USB</b>. <code>pip</code> and <code>.venv</code>
+        never touch the board.</p></div>
+      <div class="card"><span class="ic">Shift 2</span><h4><code>main.py</code> runs at power-on</h4>
+        <p>No terminal, no <code>python main.py</code>. Whatever is named <code>main.py</code> on the
+        board's filesystem runs automatically every time power arrives. That's what makes it an
+        <em>appliance</em>.</p></div>
+      <div class="card"><span class="ic">Shift 3</span><h4>The REPL is a live wire into the chip</h4>
+        <p>Over the same USB cable you get a Python prompt <em>running on the board</em>. Poke pins,
+        test ideas, read tracebacks — interactively.</p></div>
+      <div class="card"><span class="ic">Shift 4</span><h4>Two kinds of reset</h4>
+        <p><b>Soft reset</b> (<kbd>Ctrl</kbd>+<kbd>D</kbd> in the REPL) restarts your program in place.
+        <b>Hard reset</b> (the RESET button, or re-plugging) restarts the whole chip. You'll use both,
+        constantly.</p></div>
+      <div class="card"><span class="ic">Shift 5</span><h4><code>import</code> searches the board</h4>
+        <p>Not your project folder. If <code>main.py</code> needs a driver or a font, that file must
+        already be <em>on the board's flash</em> — which is why deploys copy the whole
+        <code>src/</code> directory.</p></div>
+      <div class="card"><span class="ic">Bonus</span><h4>Batteries (mostly) included</h4>
+        <p>MicroPython ships hardware modules like <code>machine</code> (pins, SPI),
+        <code>network</code> (Wi-Fi) and <code>ntptime</code> — plus familiar ones like
+        <code>time</code> and <code>json</code>, slimmed down.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="section-kicker">Kit</p>
+    <h2>Two tools, installed once</h2>
+    <div class="grid cols-2">
+      <div class="card"><span class="ic">Flasher</span><h4>esptool</h4>
+        <p>Espressif's utility that writes firmware images into the chip's flash. You'll use it
+        exactly twice: <code>erase_flash</code>, then <code>write_flash</code>.</p></div>
+      <div class="card"><span class="ic">Daily driver</span><h4>mpremote</h4>
+        <p>MicroPython's official Swiss-army CLI: opens the REPL, copies files, mounts folders,
+        resets the board. Every day-to-day command in this project wraps it.</p></div>
+    </div>
+<pre><code>$ uv tool install esptool
+$ uv tool install mpremote</code></pre>
+  </section>
+
+  <section>
+    <p class="section-kicker">One-time surgery</p>
+    <h2>Flash MicroPython onto the board</h2>
+    <p class="mute">New boards ship with CircuitPython (Adafruit's cousin of MicroPython). This
+    project uses MicroPython, so the first job is replacing the firmware. Do it once and forget it.</p>
+
+    <div class="steps">
+      <div class="step">
+        <h4>Download the firmware</h4>
+        <p>Grab the latest <b>Standard</b> <code>.bin</code> from the
+        <a href="https://micropython.org/download/ESP32_GENERIC_S3/">ESP32_GENERIC_S3 download page</a>.</p>
+      </div>
+      <div class="step">
+        <h4>Enter bootloader mode</h4>
+        <p>Hold <kbd>D0</kbd>, tap <kbd>RESET</kbd>, release <kbd>D0</kbd>. The screen goes dark and
+        the board re-appears as a bare ROM bootloader, ready to accept firmware. (This is why D0 is
+        also labeled BOOT.)</p>
+      </div>
+      <div class="step">
+        <h4>Erase, then write</h4>
+        <p>Find your serial port, wipe the old firmware, and write the new one at address
+        <code>0</code>:</p>
+<pre><code><span class="c"># macOS: ls /dev/cu.usbmodem*   ·   Linux: ls /dev/ttyACM*</span>
+$ esptool.py --chip esp32s3 --port /dev/cu.usbmodem1101 erase_flash
+$ esptool.py --chip esp32s3 --port /dev/cu.usbmodem1101 --baud 460800 \
+      write_flash <span class="p">0</span> ESP32_GENERIC_S3-*.bin</code></pre>
+      </div>
+      <div class="step">
+        <h4>Press RESET</h4>
+        <p>The board reboots into MicroPython. Nothing shows on screen yet — there's no program
+        installed. The proof of life is in the REPL, next.</p>
+      </div>
+    </div>
+
+    <div class="callout warn">
+      <span class="sign">Two traps</span>
+      <p><b>Don't download the “Octal-SPIRAM” build</b> — this board has quad PSRAM and the octal
+      build won't boot. And note the write address for the ESP32-S3 is <b>0</b>, not the
+      <code>0x1000</code> you'll see in older ESP32 tutorials.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="section-kicker">First contact</p>
+    <h2>Say hello over the REPL</h2>
+    <p class="mute">Connect to the board and you're typing Python <em>into the chip</em>. Light the
+    NeoPixel — note how the power-gate pin from chapter 01 shows up immediately:</p>
+
+<pre><code>$ mpremote
+<span class="o">Connected to MicroPython at /dev/cu.usbmodem1101</span>
+<span class="p">&gt;&gt;&gt;</span> print("hello from the board")
+<span class="o">hello from the board</span>
+<span class="p">&gt;&gt;&gt;</span> import machine, neopixel
+<span class="p">&gt;&gt;&gt;</span> machine.Pin(21, machine.Pin.OUT, value=1)   <span class="c"># switch on the NeoPixel's power rail</span>
+<span class="p">&gt;&gt;&gt;</span> np = neopixel.NeoPixel(machine.Pin(33), 1)
+<span class="p">&gt;&gt;&gt;</span> np[0] = (0, 40, 0); np.write()              <span class="c"># and it glows green</span></code></pre>
+
+    <p>Three keystrokes run the whole show in the REPL:</p>
+    <div class="keys">
+      <div class="key-card"><kbd>Ctrl</kbd> + <kbd>C</kbd><p>Interrupt the running program and drop
+        to the prompt — your escape hatch from any loop.</p></div>
+      <div class="key-card"><kbd>Ctrl</kbd> + <kbd>D</kbd><p>Soft reset: re-runs <code>boot.py</code>
+        then <code>main.py</code> without cutting power.</p></div>
+      <div class="key-card"><kbd>Ctrl</kbd> + <kbd>]</kbd><p>Exit <code>mpremote</code> and hand the
+        serial port back to your terminal.</p></div>
+    </div>
+
+    <div class="callout">
+      <span class="sign">Field tip</span>
+      <p>Only <b>one program at a time</b> can hold the serial port. If <code>mpremote</code> says the
+      port is busy or “could not enter raw repl”, close Thonny / other REPLs and retry.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="section-kicker">Rhythm</p>
+    <h2>The dev loop</h2>
+    <div class="diagram">
+      <svg viewBox="0 0 800 230" role="img" aria-label="The development loop: edit on the laptop, copy to the board, the board runs it on boot, repeat">
+        <defs>
+          <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#4a5570"/>
+          </marker>
+        </defs>
+        <rect class="dg-box" x="30" y="55" width="210" height="90" rx="10"/>
+        <text class="dg-title" x="50" y="88">1 · Edit on the laptop</text>
+        <text class="dg-sub" x="50" y="110">src/*.py in your editor,</text>
+        <text class="dg-sub" x="50" y="126">with autocomplete from stubs</text>
+
+        <rect class="dg-box" x="295" y="55" width="210" height="90" rx="10"/>
+        <text class="dg-title" x="315" y="88">2 · Copy to the board</text>
+        <text class="dg-sub" x="315" y="110">mpremote cp src/*.py :</text>
+        <text class="dg-sub" x="315" y="126">(wrapped as `make deploy`)</text>
+
+        <rect class="dg-box" x="560" y="55" width="210" height="90" rx="10"/>
+        <text class="dg-title" x="580" y="88">3 · It runs on boot</text>
+        <text class="dg-sub" x="580" y="110">main.py auto-starts;</text>
+        <text class="dg-sub" x="580" y="126">watch prints in the REPL</text>
+
+        <line class="dg-arrow" x1="240" y1="100" x2="288" y2="100"/>
+        <line class="dg-arrow" x1="505" y1="100" x2="553" y2="100"/>
+        <path class="dg-arrow" d="M665 145 L665 190 L135 190 L135 152" stroke-linejoin="round"/>
+        <text class="dg-alabel" x="330" y="182">tweak → repeat (seconds, not minutes)</text>
+      </svg>
+    </div>
+    <p>Two shortcuts collapse the loop even further while you iterate:</p>
+    <div class="grid cols-2">
+      <div class="card"><span class="ic">No install</span><h4><code>mpremote run file.py</code></h4>
+        <p>Pipe one script straight into RAM and run it — nothing written to the board's flash.
+        Great for quick experiments.</p></div>
+      <div class="card"><span class="ic">No copy at all</span><h4><code>mpremote mount src</code></h4>
+        <p>Make the board <em>see your laptop folder</em> as its filesystem. Edit locally, run
+        <code>import main</code> in the REPL, repeat — zero copying while you iterate.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="section-kicker">Go deeper</p>
+    <h2>Bookmark these</h2>
+    <div class="resources">
+      <a class="res" href="https://docs.micropython.org/"><span class="t">MicroPython documentation</span><span class="d">The language, the libraries, what's different from CPython</span></a>
+      <a class="res" href="https://docs.micropython.org/en/latest/esp32/quickref.html"><span class="t">ESP32 quick reference</span><span class="d">Pins, PWM, I²C, Wi-Fi — one page of copy-paste recipes</span></a>
+      <a class="res" href="https://micropython.org/download/ESP32_GENERIC_S3/"><span class="t">ESP32-S3 firmware downloads</span><span class="d">The .bin files this chapter flashes</span></a>
+      <a class="res" href="https://docs.micropython.org/en/latest/reference/mpremote.html"><span class="t">mpremote reference</span><span class="d">Every subcommand of the daily-driver tool</span></a>
+      <a class="res" href="https://docs.espressif.com/projects/esptool/"><span class="t">esptool documentation</span><span class="d">Flashing internals, when you need them</span></a>
+      <a class="res" href="https://github.com/Josverl/micropython-stubs"><span class="t">micropython-stubs</span><span class="d">Editor autocomplete for machine, network &amp; friends — pre-wired in this repo's .venv</span></a>
+    </div>
+  </section>
+
+  <div class="pager">
+    <a href="board.html"><span class="dir">Back · Chapter 01</span><span class="to">← Meet the board</span></a>
+    <a class="next" href="app.html"><span class="dir">Next · Chapter 03</span><span class="to">Tour the app →</span></a>
+  </div>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Companion guide to <a href="https://github.com/AlteredCraft/openrouter-desktop-dash">openrouter-desktop-dash</a> (MIT licensed).</p>
+    <p>Board photography and pinout diagrams © Adafruit Industries, from the
+    <a href="https://learn.adafruit.com/esp32-s3-reverse-tft-feather">Adafruit Learning System guide</a>
+    for this board, used with attribution (CC BY-SA 3.0).</p>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -12,7 +12,9 @@ the ESP32-S3. Swap the `openrouter.py` client and the `dash.py` layout and you h
 frame, a CI monitor, a crypto ticker, a home-automation panel — same skeleton.
 
 New to microcontrollers but know Python? The **[Mental model](#mental-model)** section is written
-for you.
+for you — and there's an illustrated companion
+**[field guide](https://alteredcraft.github.io/openrouter-desktop-dash/)** (served from
+[`docs/`](docs/)): the board up close, MicroPython basics, and a guided tour of this app.
 
 ## What it demonstrates
 
