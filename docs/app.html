@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>03 · Tour the app — Desk Dash field guide</title>
+<meta name="description" content="A guided tour of the OpenRouter desk dashboard: its screens, buttons, architecture and main loop — and how to remix it into your own always-on gadget.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%230b0e14'/%3E%3Crect x='2' y='3' width='12' height='8' rx='1' fill='%232fd8f2'/%3E%3Ccircle cx='5' cy='13.5' r='1' fill='%23667089'/%3E%3Ccircle cx='8' cy='13.5' r='1' fill='%23667089'/%3E%3Ccircle cx='11' cy='13.5' r='1' fill='%23667089'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="wrap">
+    <a class="nav-logo" href="index.html"><span class="tick">▚</span> desk-dash · field guide</a>
+    <div class="nav-links">
+      <a href="board.html"><span class="n">01</span><span class="label">The Board</span></a>
+      <a href="micropython.html"><span class="n">02</span><span class="label">MicroPython</span></a>
+      <a class="active" href="app.html"><span class="n">03</span><span class="label">The App</span></a>
+      <a class="nav-gh" href="https://github.com/AlteredCraft/openrouter-desktop-dash" title="Source on GitHub">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        <span class="label">GitHub</span>
+      </a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="kicker"><span class="chnum">Chapter 03 ·</span> Software</p>
+    <h1>Tour the app</h1>
+    <p class="lede">About <b>800 lines of commented Python</b> turn the board into an appliance:
+    join Wi-Fi, call OpenRouter over HTTPS, render spend on the TFT, repeat every minute.
+    This chapter walks the screens, the architecture, and the loop — then shows you where
+    to cut when you remix it.</p>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section>
+    <p class="section-kicker">The screens</p>
+    <h2>Four states, one tiny display</h2>
+    <p class="mute">These mockups aren't artist's impressions — they're drawn from the same
+    pixel coordinates <code>dash.py</code> uses on the real 240×135 panel.</p>
+
+    <div class="device-grid">
+      <div>
+        <div class="device">
+          <div class="screen">
+            <svg viewBox="0 0 240 135" role="img" aria-label="Per-key dashboard: Today, Week, Month rows, a Used row with budget bar, update time and key pager">
+              <rect width="240" height="135" fill="#000"/>
+              <text class="tft-t" x="8" y="13" textLength="64" lengthAdjust="spacingAndGlyphs">warp</text>
+              <rect x="224" y="2" width="12" height="12" fill="#34d97b"/>
+              <line x1="0" y1="18.5" x2="240" y2="18.5" stroke="#4b5266"/>
+              <text class="tft-t" x="8" y="33" textLength="80" lengthAdjust="spacingAndGlyphs">Today</text>
+              <text class="tft-t cyan" x="104" y="33" textLength="80" lengthAdjust="spacingAndGlyphs">$0.35</text>
+              <text class="tft-t" x="8" y="51" textLength="64" lengthAdjust="spacingAndGlyphs">Week</text>
+              <text class="tft-t cyan" x="104" y="51" textLength="80" lengthAdjust="spacingAndGlyphs">$1.20</text>
+              <text class="tft-t" x="8" y="69" textLength="80" lengthAdjust="spacingAndGlyphs">Month</text>
+              <text class="tft-t cyan" x="104" y="69" textLength="80" lengthAdjust="spacingAndGlyphs">$4.50</text>
+              <line x1="0" y1="74.5" x2="240" y2="74.5" stroke="#4b5266"/>
+              <text class="tft-t" x="8" y="89" textLength="64" lengthAdjust="spacingAndGlyphs">Used</text>
+              <text class="tft-t cyan" x="104" y="89" textLength="80" lengthAdjust="spacingAndGlyphs">$0.35</text>
+              <rect x="8" y="96" width="122" height="10" fill="#20242e"/>
+              <rect x="8" y="96" width="3" height="10" fill="#34d97b"/>
+              <rect x="8.5" y="96.5" width="121" height="9" fill="none" stroke="#4b5266"/>
+              <text class="tft-t dim" x="136" y="106" textLength="96" lengthAdjust="spacingAndGlyphs">$20.00</text>
+              <text class="tft-t dim" x="8" y="125" textLength="112" lengthAdjust="spacingAndGlyphs">@ 18:51</text>
+              <text class="tft-t dim" x="184" y="125" textLength="48" lengthAdjust="spacingAndGlyphs">1/3</text>
+            </svg>
+          </div>
+          <div class="btn-row"><span>D0</span><span>D1</span><span>D2</span></div>
+        </div>
+        <p class="device-caption"><b>1 · Per-key dash</b> — the default view. Today / Week / Month
+        spend for the selected key, then <b>Used</b> against that key's credit limit with a bar
+        that fills green → orange → red. Top-right: the Wi-Fi dot. Bottom: last-update clock and
+        a <code>1/3</code> pager showing which key is selected.</p>
+      </div>
+
+      <div>
+        <div class="device">
+          <div class="screen">
+            <svg viewBox="0 0 240 135" role="img" aria-label="Account overview: usage summed across keys, account balance and a credit burn bar">
+              <rect width="240" height="135" fill="#000"/>
+              <text class="tft-t" x="8" y="13" textLength="112" lengthAdjust="spacingAndGlyphs">Account</text>
+              <rect x="224" y="2" width="12" height="12" fill="#34d97b"/>
+              <line x1="0" y1="18.5" x2="240" y2="18.5" stroke="#4b5266"/>
+              <text class="tft-t" x="8" y="33" textLength="80" lengthAdjust="spacingAndGlyphs">Today</text>
+              <text class="tft-t cyan" x="104" y="33" textLength="80" lengthAdjust="spacingAndGlyphs">$0.35</text>
+              <text class="tft-t" x="8" y="51" textLength="64" lengthAdjust="spacingAndGlyphs">Week</text>
+              <text class="tft-t cyan" x="104" y="51" textLength="80" lengthAdjust="spacingAndGlyphs">$2.60</text>
+              <text class="tft-t" x="8" y="69" textLength="80" lengthAdjust="spacingAndGlyphs">Month</text>
+              <text class="tft-t cyan" x="104" y="69" textLength="80" lengthAdjust="spacingAndGlyphs">$9.80</text>
+              <line x1="0" y1="74.5" x2="240" y2="74.5" stroke="#4b5266"/>
+              <text class="tft-t" x="8" y="89" textLength="64" lengthAdjust="spacingAndGlyphs">Left</text>
+              <text class="tft-t cyan" x="104" y="89" textLength="80" lengthAdjust="spacingAndGlyphs">$7.61</text>
+              <rect x="8" y="96" width="122" height="10" fill="#20242e"/>
+              <rect x="8" y="96" width="75" height="10" fill="#ffa02e"/>
+              <rect x="8.5" y="96.5" width="121" height="9" fill="none" stroke="#4b5266"/>
+              <text class="tft-t dim" x="136" y="106" textLength="96" lengthAdjust="spacingAndGlyphs">$20.00</text>
+              <text class="tft-t dim" x="8" y="125" textLength="112" lengthAdjust="spacingAndGlyphs">@ 18:51</text>
+              <text class="tft-t dim" x="136" y="125" textLength="96" lengthAdjust="spacingAndGlyphs">2 keys</text>
+            </svg>
+          </div>
+          <div class="btn-row"><span>D0</span><span>D1</span><span>D2</span></div>
+        </div>
+        <p class="device-caption"><b>2 · Account overview</b> — press <b>D0</b>. Rows are summed
+        across <em>all</em> configured keys; <b>Left</b> is your account credit balance and the bar
+        shows how much of your purchased credits you've burned. Press D0 again to go back.</p>
+      </div>
+
+      <div>
+        <div class="device">
+          <div class="screen">
+            <svg viewBox="0 0 240 135" role="img" aria-label="Loading screen shown instantly when switching keys or views">
+              <rect width="240" height="135" fill="#000"/>
+              <text class="tft-t" x="8" y="13" textLength="64" lengthAdjust="spacingAndGlyphs">prod</text>
+              <line x1="0" y1="18.5" x2="240" y2="18.5" stroke="#4b5266"/>
+              <text class="tft-t cyan" x="64" y="69" textLength="112" lengthAdjust="spacingAndGlyphs">Loading</text>
+              <text class="tft-t dim" x="184" y="125" textLength="48" lengthAdjust="spacingAndGlyphs">2/3</text>
+            </svg>
+          </div>
+          <div class="btn-row"><span>D0</span><span>D1</span><span>D2</span></div>
+        </div>
+        <p class="device-caption"><b>3 · Switching</b> — any button press paints this emblem
+        <em>instantly</em>, before the (blocking) network fetch. Without it, a key switch would
+        leave the previous key's numbers on screen for a whole round-trip and feel ignored.</p>
+      </div>
+
+      <div>
+        <div class="device">
+          <div class="screen">
+            <svg viewBox="0 0 240 135" role="img" aria-label="Setup needed screen shown when config.py is missing or incomplete">
+              <rect width="240" height="135" fill="#000"/>
+              <text class="tft-t" x="24" y="58" textLength="192" lengthAdjust="spacingAndGlyphs">Setup needed</text>
+              <text class="tft-t dim" x="8" y="85" textLength="224" lengthAdjust="spacingAndGlyphs">Edit config.py</text>
+            </svg>
+          </div>
+          <div class="btn-row"><span>D0</span><span>D1</span><span>D2</span></div>
+        </div>
+        <p class="device-caption"><b>4 · Fail fast, degrade gracefully</b> — missing config stops
+        here instead of crashing. And once running, a failed refresh <em>keeps the last good
+        numbers</em> on screen with a short reason (<code>Check API key</code>,
+        <code>API unreachable</code>) in place of the clock.</p>
+      </div>
+    </div>
+
+    <h3>The controls</h3>
+    <div class="grid cols-3">
+      <div class="card"><span class="ic">D0 · GPIO0</span><h4>Toggle account ⇄ key view</h4>
+        <p>The BOOT button moonlights as the account-overview switch. Wired active-low — one of
+        the two button wirings <code>buttons.py</code> hides for you.</p></div>
+      <div class="card"><span class="ic">D1 · GPIO1</span><h4>Next key</h4>
+        <p>Pages forward through <code>OPENROUTER_KEYS</code>, wrapping at the end. Switching
+        refreshes that key's numbers immediately.</p></div>
+      <div class="card"><span class="ic">D2 · GPIO2</span><h4>Previous key</h4>
+        <p>Pages backward, wrapping at the start. With a single key configured, D1/D2 do nothing
+        and no pager is drawn.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="section-kicker">Blueprint</p>
+    <h2>Architecture: a pure core in a hardware shell</h2>
+    <p class="mute">The design rule that shapes everything: <b>parsing and formatting logic never
+    touches hardware</b>, so it runs — and is unit-tested — on your laptop. Hardware modules stay
+    thin wrappers.</p>
+
+    <div class="diagram">
+      <svg viewBox="0 0 800 520" role="img" aria-label="Architecture: main.py orchestrates network, buttons and config; pure view-model modules transform API payloads; dash.py renders through the ST7789 driver to the TFT">
+        <defs>
+          <marker id="arr2" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#4a5570"/>
+          </marker>
+        </defs>
+
+        <rect class="dg-box cloud" x="250" y="16" width="300" height="62" rx="10"/>
+        <text class="dg-tag cloud" x="270" y="38">CLOUD</text>
+        <text class="dg-title" x="270" y="56">OpenRouter API</text>
+        <text class="dg-sub" x="270" y="71">GET /api/v1/key · GET /api/v1/credits</text>
+
+        <line class="dg-arrow" x1="400" y1="78" x2="400" y2="128"/>
+        <text class="dg-alabel" x="412" y="106">HTTPS · openrouter.py + urequests.py</text>
+
+        <rect class="dg-box hw" x="20" y="130" width="188" height="76" rx="10"/>
+        <text class="dg-tag hw" x="38" y="152">BOARD I/O</text>
+        <text class="dg-title" x="38" y="170">net.py + config.py</text>
+        <text class="dg-sub" x="38" y="186">Wi-Fi · NTP clock · secrets</text>
+        <line class="dg-arrow" x1="208" y1="168" x2="243" y2="168"/>
+
+        <rect class="dg-box" x="250" y="130" width="300" height="76" rx="10"/>
+        <text class="dg-tag hw" x="270" y="152">ORCHESTRATOR</text>
+        <text class="dg-title" x="270" y="170">main.py — the loop</text>
+        <text class="dg-sub" x="270" y="186">poll buttons · refresh on a deadline · degrade</text>
+
+        <rect class="dg-box hw" x="592" y="130" width="188" height="76" rx="10"/>
+        <text class="dg-tag hw" x="610" y="152">BOARD I/O</text>
+        <text class="dg-title" x="610" y="170">buttons.py</text>
+        <text class="dg-sub" x="610" y="186">debounced D0 / D1 / D2</text>
+        <line class="dg-arrow" x1="592" y1="168" x2="557" y2="168"/>
+
+        <line class="dg-arrow" x1="400" y1="206" x2="400" y2="256"/>
+        <text class="dg-alabel" x="412" y="234">raw JSON payload dicts</text>
+
+        <rect class="dg-box pure" x="200" y="258" width="400" height="88" rx="10"/>
+        <text class="dg-tag pure" x="220" y="282">PURE · UNIT-TESTED ON YOUR LAPTOP</text>
+        <text class="dg-title" x="220" y="302">usage_view.py · keyring.py</text>
+        <text class="dg-sub" x="220" y="319">payloads → view-model dict · key-cycling logic</text>
+        <text class="dg-sub" x="220" y="334">no machine, no network imports — just Python</text>
+
+        <path class="dg-arrow" d="M400 346 L400 378 L165 378 L165 408" stroke-linejoin="round"/>
+        <text class="dg-alabel" x="412" y="372">view-model dict</text>
+
+        <rect class="dg-box hw" x="60" y="410" width="210" height="76" rx="10"/>
+        <text class="dg-tag hw" x="78" y="432">RENDERER</text>
+        <text class="dg-title" x="78" y="450">dash.py</text>
+        <text class="dg-sub" x="78" y="466">layout · colors · budget bar</text>
+
+        <line class="dg-arrow" x1="270" y1="448" x2="313" y2="448"/>
+
+        <rect class="dg-box hw" x="320" y="410" width="210" height="76" rx="10"/>
+        <text class="dg-tag hw" x="338" y="432">VENDORED DRIVER</text>
+        <text class="dg-title" x="338" y="450">st7789py.py + font</text>
+        <text class="dg-sub" x="338" y="466">pixels over SPI @ 40 MHz</text>
+
+        <line class="dg-arrow" x1="530" y1="448" x2="573" y2="448"/>
+
+        <rect class="dg-box cloud" x="580" y="410" width="200" height="76" rx="10"/>
+        <text class="dg-tag cloud" x="598" y="432">GLASS</text>
+        <text class="dg-title" x="598" y="450">240×135 TFT</text>
+        <text class="dg-sub" x="598" y="466">the thing on your desk</text>
+      </svg>
+    </div>
+
+    <div class="callout">
+      <span class="sign">Why it matters</span>
+      <p>The two green-outlined modules import <b>nothing hardware-specific</b> — and even the
+      renderer is exercised against a fake display — so <code>make test</code> runs
+      <b>73 pytest cases</b> on your laptop with no board plugged in. Most of the app's actual
+      decisions (parsing, formatting, fallbacks, key cycling) live in that pure core.</p>
+    </div>
+
+    <h3>File-by-file</h3>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>File</th><th>Job</th><th>Runs on</th></tr></thead>
+        <tbody>
+          <tr><td><code>main.py</code></td><td>Boot entry: power the display, join Wi-Fi, run the poll/render loop</td><td>board</td></tr>
+          <tr><td><code>usage_view.py</code></td><td>API payloads → view-model; all parsing &amp; formatting decisions</td><td>board <span class="mute">+ laptop tests</span></td></tr>
+          <tr><td><code>keyring.py</code></td><td>Config → a wrapping cycle of API keys for D1/D2</td><td>board <span class="mute">+ laptop tests</span></td></tr>
+          <tr><td><code>dash.py</code></td><td>Draws the view-model: rows, Wi-Fi dot, budget bar, pager</td><td>board</td></tr>
+          <tr><td><code>openrouter.py</code></td><td>Thin HTTPS client for <code>/key</code> and <code>/credits</code></td><td>board</td></tr>
+          <tr><td><code>net.py</code></td><td>Wi-Fi connect with timeout + best-effort NTP sync</td><td>board</td></tr>
+          <tr><td><code>buttons.py</code></td><td>Debounced button reads; hides the D0-vs-D1/D2 wiring difference</td><td>board</td></tr>
+          <tr><td><code>config.py</code></td><td>Your Wi-Fi + keys (gitignored; copied from <code>config.example.py</code>)</td><td>board</td></tr>
+          <tr><td><code>urequests.py</code> · <code>st7789py.py</code> · <code>vga2_bold_16x16.py</code></td><td>Vendored HTTP client, display driver, bitmap font (MIT)</td><td>board</td></tr>
+          <tr><td><code>tests/</code></td><td>73 host-side pytest cases: the pure modules, plus the renderer against a fake TFT</td><td>laptop only</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <p class="section-kicker">Heartbeat</p>
+    <h2>The main loop</h2>
+    <p class="mute">No threads, no asyncio — one polite loop that wakes 20 times a second to check
+    buttons, and refreshes when a deadline passes. Abridged from
+    <a href="https://github.com/AlteredCraft/openrouter-desktop-dash/blob/main/src/main.py"><code>main.py</code></a>:</p>
+
+<pre><code><span class="k">while</span> True:
+    <span class="k">if</span> acct_btn.fell():                      <span class="c"># D0: flip key ⇄ account view</span>
+        show_account = <span class="k">not</span> show_account
+        dash.render_loading(tft, ...)        <span class="c"># acknowledge the press instantly</span>
+        last_view = _poll_account(tft, ring, <span class="k">None</span>)
+
+    <span class="k">elif</span> time.ticks_diff(deadline, time.ticks_ms()) &lt;= 0:
+        last_view = _poll(tft, entry, ring.position(), last_view)
+        deadline = time.ticks_add(time.ticks_ms(), refresh * 1000)
+
+    time.sleep_ms(50)                        <span class="c"># check buttons ~20×/s between refreshes</span></code></pre>
+
+    <p>Three habits in there are worth stealing for any gadget:</p>
+    <div class="grid cols-3">
+      <div class="card"><span class="ic">Time</span><h4><code>ticks_ms</code>, not <code>time.time()</code></h4>
+        <p>MicroPython's tick helpers (<code>ticks_add</code>/<code>ticks_diff</code>) handle
+        counter wrap-around safely — the idiomatic way to schedule “every N seconds”.</p></div>
+      <div class="card"><span class="ic">Feel</span><h4>Acknowledge before you block</h4>
+        <p>The network fetch takes ~a second and blocks. Painting <em>Loading</em> first makes
+        every press feel registered.</p></div>
+      <div class="card"><span class="ic">Resilience</span><h4>Keep the last good data</h4>
+        <p>A failed refresh never blanks the screen: old numbers stay, with a short reason. An
+        appliance should degrade, not crash.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="section-kicker">Hands on</p>
+    <h2>Run it yourself</h2>
+    <div class="steps">
+      <div class="step">
+        <h4>Configure</h4>
+        <p>Copy the template (it's gitignored, so secrets stay local) and add your Wi-Fi and one
+        or more <a href="https://openrouter.ai/settings/keys">OpenRouter keys</a>:</p>
+<pre><code>$ cp src/config.example.py src/config.py</code></pre>
+      </div>
+      <div class="step">
+        <h4>Test on the laptop first</h4>
+        <p>No board needed — this exercises the pure core:</p>
+<pre><code>$ uv sync
+$ make test</code></pre>
+      </div>
+      <div class="step">
+        <h4>Deploy</h4>
+        <p>Copies every module in <code>src/</code> (plus <code>config.py</code>) to the board's
+        flash, then resets it. The board connects and the dash appears:</p>
+<pre><code>$ make deploy</code></pre>
+      </div>
+    </div>
+
+    <p>The Makefile wraps the whole <code>mpremote</code> workflow from chapter 02 — these are the
+    targets you'll actually type:</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Target</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><code>make deploy</code></td><td>Copy <code>src/*.py</code> + <code>config.py</code> to the board and reset</td></tr>
+          <tr><td><code>make repl</code></td><td>Open the live REPL (see full error detail the screen won't show)</td></tr>
+          <tr><td><code>make mount</code></td><td>Board uses your <code>src/</code> live — edit, <code>import main</code>, repeat</td></tr>
+          <tr><td><code>make run</code></td><td>Run <code>main.py</code> once without installing it</td></tr>
+          <tr><td><code>make test</code></td><td>Host-side pytest for the pure logic</td></tr>
+          <tr><td><code>make wipe</code></td><td>Remove <code>main.py</code> so the board stops auto-running</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout warn">
+      <span class="sign">If it sulks</span>
+      <p>Blank screen, <code>No Wi-Fi</code>, port busy, swapped colors — the
+      <a href="https://github.com/AlteredCraft/openrouter-desktop-dash#troubleshooting">README's
+      troubleshooting table</a> covers every known failure and its one-line fix.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="section-kicker">Remix</p>
+    <h2>Make it your own</h2>
+    <p class="mute">The OpenRouter dashboard is just the payload. Underneath is a reusable
+    skeleton for any <em>“call an API, show it on a screen”</em> gadget — three cuts and it's
+    yours:</p>
+
+    <div class="steps">
+      <div class="step">
+        <h4>Swap the client</h4>
+        <p>Replace <code>openrouter.py</code> with a thin client for your API: fetch, return a
+        dict. Keep it dumb.</p>
+      </div>
+      <div class="step">
+        <h4>Reshape the view-model</h4>
+        <p>Rewrite <code>usage_view.build_view()</code> to map your payload into the fields you
+        want on screen — and update the tests beside it, still no hardware required.</p>
+      </div>
+      <div class="step">
+        <h4>Redraw the layout</h4>
+        <p>Adjust <code>dash.py</code>'s rows and bar to render your fields.
+        <code>main.py</code>, <code>net.py</code>, the Makefile and the config handling don't
+        change at all.</p>
+      </div>
+    </div>
+
+    <div class="chips">
+      <span class="chip"><b>weather</b> frame</span>
+      <span class="chip"><b>CI</b> build monitor</span>
+      <span class="chip"><b>crypto</b> ticker</span>
+      <span class="chip"><b>home-automation</b> panel</span>
+      <span class="chip"><b>train departures</b> board</span>
+      <span class="chip"><b>GitHub stars</b> counter</span>
+    </div>
+  </section>
+
+  <section>
+    <p class="section-kicker">Go deeper</p>
+    <h2>Bookmark these</h2>
+    <div class="resources">
+      <a class="res" href="https://github.com/AlteredCraft/openrouter-desktop-dash#readme"><span class="t">The README</span><span class="d">Full setup, multiple-keys config, troubleshooting table</span></a>
+      <a class="res" href="https://openrouter.ai/settings/keys"><span class="t">OpenRouter key settings</span><span class="d">Create the read-only inference keys the dash watches</span></a>
+      <a class="res" href="https://openrouter.ai/docs"><span class="t">OpenRouter API docs</span><span class="d">The /key and /credits endpoints behind the numbers</span></a>
+      <a class="res" href="https://github.com/russhughes/st7789py_mpy"><span class="t">st7789py_mpy</span><span class="d">The vendored display driver — fonts, shapes, more examples</span></a>
+      <a class="res" href="https://github.com/micropython/micropython-lib"><span class="t">micropython-lib</span><span class="d">Where the vendored urequests HTTP client comes from</span></a>
+      <a class="res" href="https://github.com/AlteredCraft/openrouter-desktop-dash/tree/main/tests"><span class="t">The test suite</span><span class="d">73 cases showing exactly how the pure core behaves</span></a>
+    </div>
+  </section>
+
+  <div class="pager">
+    <a href="micropython.html"><span class="dir">Back · Chapter 02</span><span class="to">← Python on bare metal</span></a>
+    <a class="next" href="index.html"><span class="dir">Finish</span><span class="to">Back to the cover →</span></a>
+  </div>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Companion guide to <a href="https://github.com/AlteredCraft/openrouter-desktop-dash">openrouter-desktop-dash</a> (MIT licensed).</p>
+    <p>Board photography and pinout diagrams © Adafruit Industries, from the
+    <a href="https://learn.adafruit.com/esp32-s3-reverse-tft-feather">Adafruit Learning System guide</a>
+    for this board, used with attribution (CC BY-SA 3.0).</p>
+  </div>
+</footer>
+
+</body>
+</html>

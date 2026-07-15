@@ -12,7 +12,9 @@ the ESP32-S3. Swap the `openrouter.py` client and the `dash.py` layout and you h
 frame, a CI monitor, a crypto ticker, a home-automation panel — same skeleton.
 
 New to microcontrollers but know Python? The **[Mental model](#mental-model)** section is written
-for you.
+for you — and there's an illustrated companion
+**[field guide](https://alteredcraft.github.io/openrouter-desktop-dash/)** (served from
+[`docs/`](docs/)): the board up close, MicroPython basics, and a guided tour of this app.
 
 ## What it demonstrates
 
@@ -30,7 +32,7 @@ The reusable ESP32-S3 + MicroPython patterns this example wires together:
 - **NTP time sync** for an on-screen clock (`net.py`).
 - **Testable architecture:** the parsing/formatting logic (`usage_view.py`) and key-cycling
   logic (`keyring.py`) import nothing hardware-specific, so they run and are **unit-tested on
-  your laptop** (`make test`, 70 cases) — no board required.
+  your laptop** (`make test`, 73 cases) — no board required.
 - **Fail-fast config + graceful degradation:** missing settings show *Setup needed*; a failed
   refresh keeps the last-good numbers on screen with a short reason instead of crashing.
 - **A frictionless dev loop:** an `mpremote`-driven `Makefile` that auto-detects the serial
@@ -82,7 +84,7 @@ also the account toggle), **D1** (next key), **D2** (previous key).
         ║ ├───────────────────────────────┤ ║
         ║ │ Used                    $0.35 │ ║
         ║ │ [█░░░░░░░░░░░░░░░░░]   $20.00 │ ║
-        ║ │ upd 18:51                 1/3 │ ║
+        ║ │ @ 18:51                   1/3 │ ║
         ║ └───────────────────────────────┘ ║
         ║     ◉ D0      ◉ D1      ◉ D2      ║
         ╚═══════════════════════════════════╝
@@ -104,7 +106,7 @@ account-wide balance and burn from `/credits`.
         ║ ├───────────────────────────────┤ ║
         ║ │ Left                    $7.61 │ ║
         ║ │ [██████████░░░░░░░]    $20.00 │ ║
-        ║ │ upd 18:51              2 keys │ ║
+        ║ │ @ 18:51                2 keys │ ║
         ║ └───────────────────────────────┘ ║
         ║     ◉ D0      ◉ D1      ◉ D2      ║
         ╚═══════════════════════════════════╝
