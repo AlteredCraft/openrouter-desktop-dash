@@ -59,6 +59,14 @@ def _degrade(tft, last_view, note, page):
         dash.render_error(tft, "Can't update", note)
 
 
+def _degrade_account(tft, last_view, note):
+    """Account-screen counterpart of _degrade: keep the last good rollup with a warning."""
+    if last_view is not None:
+        dash.render_account(tft, last_view, _clock(), wifi_ok=False, note=note)
+    else:
+        dash.render_error(tft, "Can't update", note)
+
+
 def _poll(tft, entry, page, last_view):
     """Refresh one key's usage. `entry` is a {"key","name"} ring entry, `page` its
     (current, total) position for the pager. Returns the newest view (or the prior one
@@ -85,6 +93,49 @@ def _poll(tft, entry, page, last_view):
         print("Network error:", exc)
         _degrade(tft, last_view, "API unreachable", page)
         return last_view
+
+
+def _poll_account(tft, ring, last_view):
+    """Refresh the D0 account overview: fetch every configured key, sum their usage, and
+    read the account balance once from /credits (it's account-wide, same for any key).
+
+    A single key failing is tolerated — its usage is dropped from the rollup. Only when
+    *nothing* comes back do we degrade, distinguishing a bad key (401/403) from an outage.
+    On a fresh toggle pass last_view=None so a failure can't show a stale account screen.
+    """
+    keys_data = []
+    auth_err = False
+    net_err = False
+    for entry in ring.entries():
+        try:
+            keys_data.append(openrouter.fetch_key(entry["key"]))
+        except openrouter.ApiError as exc:
+            print("account key error:", exc.status)
+            if exc.status in (401, 403):
+                auth_err = True
+        except OSError as exc:
+            print("account key network error:", exc)
+            net_err = True
+
+    credits = None
+    try:
+        credits = openrouter.fetch_credits(ring.current()["key"])
+    except openrouter.ApiError as exc:
+        print("account credits error:", exc.status)
+        if exc.status in (401, 403):
+            auth_err = True
+    except OSError as exc:
+        print("account credits network error:", exc)
+        net_err = True
+
+    if not keys_data and credits is None:
+        note = "Check API key" if auth_err and not net_err else "API unreachable"
+        _degrade_account(tft, last_view, note)
+        return last_view
+
+    view = usage_view.build_account_view(keys_data, credits, len(ring))
+    dash.render_account(tft, view, _clock(), wifi_ok=net.isconnected())
+    return view
 
 
 def main():
@@ -119,16 +170,23 @@ def main():
     refresh = getattr(config, "REFRESH_SECONDS", 60)
     next_btn = buttons.Button(1)  # D1 -> next key
     prev_btn = buttons.Button(2)  # D2 -> previous key
+    acct_btn = buttons.Button(0, active_low=True)  # D0 (BOOT) -> toggle account/key view
 
+    show_account = False  # False = per-key dash (D1/D2 page keys); True = account rollup
     entry = ring.current()
     last_view = _poll(tft, entry, ring.position(), None)
     deadline = time.ticks_add(time.ticks_ms(), refresh * 1000)
     while True:
-        # Page through keys on a button press, otherwise refresh when the interval
-        # elapses. Polling buttons every 50 ms keeps toggling responsive without
-        # blocking on a long sleep between refreshes.
+        # D0 flips between the per-key dash and the account overview; D1/D2 page keys
+        # (only meaningful in the per-key view). Otherwise refresh when the interval
+        # elapses. Polling every 50 ms keeps toggling responsive without blocking on a
+        # long sleep between refreshes.
+        toggled = acct_btn.fell()
+        if toggled:
+            show_account = not show_account
+
         moved = False
-        if ring.has_multiple:
+        if not show_account and ring.has_multiple:
             if next_btn.fell():
                 entry = ring.next()
                 moved = True
@@ -136,14 +194,22 @@ def main():
                 entry = ring.prev()
                 moved = True
 
-        if moved:
-            # Acknowledge the press before the (blocking) fetch, so the switch shows
-            # instantly instead of leaving the prior key's dash up during the fetch.
-            dash.render_loading(tft, entry["name"], ring.position())
-            last_view = _poll(tft, entry, ring.position(), None)
+        if toggled or moved:
+            # Acknowledge the press with the loading emblem before the (blocking) fetch,
+            # so the switch shows instantly instead of leaving the prior screen up. Pass
+            # last_view=None so a failed fetch can't show numbers from the other view.
+            if show_account:
+                dash.render_loading(tft, "Account")
+                last_view = _poll_account(tft, ring, None)
+            else:
+                dash.render_loading(tft, entry["name"], ring.position())
+                last_view = _poll(tft, entry, ring.position(), None)
             deadline = time.ticks_add(time.ticks_ms(), refresh * 1000)
         elif time.ticks_diff(deadline, time.ticks_ms()) <= 0:
-            last_view = _poll(tft, entry, ring.position(), last_view)
+            if show_account:
+                last_view = _poll_account(tft, ring, last_view)
+            else:
+                last_view = _poll(tft, entry, ring.position(), last_view)
             deadline = time.ticks_add(time.ticks_ms(), refresh * 1000)
 
         time.sleep_ms(50)

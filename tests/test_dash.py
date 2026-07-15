@@ -79,3 +79,81 @@ def test_render_loading_without_page_does_not_crash():
     tft = FakeTFT()
     dash.render_loading(tft, "prod")
     assert any("Load" in s for s in tft.strings())
+
+
+def test_render_loading_reused_for_account_toggle():
+    # D0 shows the same loading emblem; "Account" is just another title, no pager.
+    tft = FakeTFT()
+    dash.render_loading(tft, "Account")
+    assert tft.calls[0] == "fill"
+    assert "Account" in tft.strings()
+    assert any("Load" in s for s in tft.strings())
+    assert not any("/" in s for s in tft.strings())
+
+
+# --- render_account: the D0 account overview -------------------------------------------
+
+ACCOUNT_VIEW = {
+    "title": "Account",
+    "today": 1.5,
+    "week": 5.0,
+    "month": 12.0,
+    "total_credits": 20.0,
+    "total_usage": 12.4,
+    "balance": 7.6,
+    "used": 12.4,
+    "budget": 20.0,
+    "remaining": 7.6,
+    "used_frac": 0.62,
+    "key_count": 2,
+}
+
+
+def test_render_account_clears_and_headers():
+    tft = FakeTFT()
+    dash.render_account(tft, ACCOUNT_VIEW, "18:51", wifi_ok=True)
+    assert tft.calls[0] == "fill"
+    assert "Account" in tft.strings()
+
+
+def test_render_account_shows_balance_as_left():
+    tft = FakeTFT()
+    dash.render_account(tft, ACCOUNT_VIEW, "18:51", wifi_ok=True)
+    assert "Left" in tft.strings()
+    assert "$7.60" in tft.strings()  # the account balance
+
+
+def test_render_account_shows_summed_rows():
+    tft = FakeTFT()
+    dash.render_account(tft, ACCOUNT_VIEW, "18:51", wifi_ok=True)
+    strings = tft.strings()
+    assert "Today" in strings and "Week" in strings and "Month" in strings
+    assert "$1.50" in strings and "$12.00" in strings  # today / month sums
+
+
+def test_render_account_shows_key_count():
+    tft = FakeTFT()
+    dash.render_account(tft, ACCOUNT_VIEW, "18:51", wifi_ok=True)
+    assert "2 keys" in tft.strings()
+
+
+def test_render_account_singular_key_count():
+    tft = FakeTFT()
+    dash.render_account(tft, dict(ACCOUNT_VIEW, key_count=1), "18:51", wifi_ok=True)
+    assert "1 key" in tft.strings()
+
+
+def test_render_account_note_replaces_clock():
+    tft = FakeTFT()
+    dash.render_account(tft, ACCOUNT_VIEW, "18:51", wifi_ok=False, note="API unreachable")
+    strings = tft.strings()
+    assert "API unreachable" in strings
+    assert not any("upd" in s for s in strings)
+
+
+def test_render_account_without_budget_shows_no_limit():
+    # /credits failed: no budget to draw, but the summed rows still render.
+    tft = FakeTFT()
+    view = dict(ACCOUNT_VIEW, balance=None, budget=None, used_frac=None)
+    dash.render_account(tft, view, "18:51", wifi_ok=True)
+    assert any("no limit" in s for s in tft.strings())

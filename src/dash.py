@@ -72,6 +72,41 @@ def render(tft, view, updated, wifi_ok, note=None, page=None):
             tft.text(font, pager, _W - len(pager) * _CHAR - 8, 112, _DIM, st7789.BLACK)
 
 
+def render_account(tft, view, updated, wifi_ok, note=None):
+    """Draw the D0 account overview: today/week/month summed across all keys, plus the
+    account credit balance and a burn bar (credits used of credits purchased).
+
+    Mirrors render()'s layout so the toggle reads instantly, but the header is fixed to
+    'Account', the featured number is the balance ('Left'), and the bottom row shows a
+    key count instead of a pager. `note` replaces the clock with a short warning, exactly
+    as in render().
+    """
+    tft.fill(st7789.BLACK)
+
+    tft.text(font, "Account", 8, 0, st7789.WHITE, st7789.BLACK)
+    tft.fill_rect(224, 2, 12, 12, st7789.GREEN if wifi_ok else st7789.RED)
+    tft.hline(0, 18, _W, _DIM)
+
+    _row(tft, "Today", view["today"], 20)
+    _row(tft, "Week", view["week"], 38)
+    _row(tft, "Month", view["month"], 56)
+
+    tft.hline(0, 74, _W, _DIM)
+    tft.text(font, "Left", 8, 76, st7789.WHITE, st7789.BLACK)
+    tft.text(font, usage_view.fmt_usd(view["balance"]), _VALUE_X, 76, st7789.CYAN, st7789.BLACK)
+
+    _budget_bar(tft, view["used_frac"], view["budget"], 8, 96, _W - 16, 10)
+
+    if note:
+        tft.text(font, note, 8, 112, st7789.YELLOW, st7789.BLACK)
+    else:
+        tft.text(font, "upd " + updated, 8, 112, _DIM, st7789.BLACK)
+        count = view.get("key_count")
+        if count:
+            tag = "1 key" if count == 1 else "%d keys" % count
+            tft.text(font, tag, _W - len(tag) * _CHAR - 8, 112, _DIM, st7789.BLACK)
+
+
 def _budget_bar(tft, used_frac, budget, x, y, w, h):
     """Budget-used meter: fills toward the limit (green -> orange -> red), limit shown at right.
 

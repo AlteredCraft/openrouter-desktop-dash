@@ -24,12 +24,13 @@ The reusable ESP32-S3 + MicroPython patterns this example wires together:
 - **JSON parsing** of the API response into a typed view-model.
 - **SPI color-TFT rendering** — text, rules, a status dot, and a green→orange→red progress bar
   on the ST7789 display (`dash.py`).
-- **Debounced button input** — the on-board D1/D2 buttons page through multiple API keys
-  (`buttons.py` reads the pins; `keyring.py` holds the pure cycle logic).
+- **Debounced button input** — the on-board buttons page through multiple API keys (D1/D2) and
+  toggle a whole-account overview (D0); `buttons.py` reads the pins, `keyring.py` holds the pure
+  cycle logic.
 - **NTP time sync** for an on-screen clock (`net.py`).
 - **Testable architecture:** the parsing/formatting logic (`usage_view.py`) and key-cycling
   logic (`keyring.py`) import nothing hardware-specific, so they run and are **unit-tested on
-  your laptop** (`make test`, 44 cases) — no board required.
+  your laptop** (`make test`, 70 cases) — no board required.
 - **Fail-fast config + graceful degradation:** missing settings show *Setup needed*; a failed
   refresh keeps the last-good numbers on screen with a short reason instead of crashing.
 - **A frictionless dev loop:** an `mpremote`-driven `Makefile` that auto-detects the serial
@@ -52,9 +53,104 @@ If you configure more than one key (see [Multiple keys](#multiple-keys)), the on
 page between them — **D1 = next, D2 = previous** — and a small `1/3` pager in the bottom-right
 shows which is active. Switching keys refreshes immediately.
 
+**Press D0 for the account overview.** D0 (the BOOT button) toggles between the per-key dash and
+a whole-account screen: **Today / Week / Month summed across every configured key**, plus your
+account credit **balance** (`total_credits − total_usage` from `/credits`) and a burn bar showing
+how much of your purchased credits you've spent. It's the one number the per-key screens hide once
+your keys have their own limits. Press D0 again to return; the same *Loading* emblem shows on every
+switch. The account rollup fetches each key, so it costs one round-trip per key on refresh.
+
 It reads OpenRouter's `GET /api/v1/key` and `GET /api/v1/credits` using a normal (read-only)
 inference API key — **not** a management/provisioning key. See
 **[Configure Wi-Fi + OpenRouter](#openrouter-setup)**.
+
+### Screens
+
+The Reverse TFT Feather's three buttons sit along the bottom edge, left to right: **D0** (BOOT,
+also the account toggle), **D1** (next key), **D2** (previous key).
+
+**1. Per-key dash** — the default view. `Used`/bar measure spend against *this key's* limit.
+
+```
+        ╔═══════════════════════════════════╗
+        ║ ┌───────────────────────────────┐ ║
+        ║ │ warp                        ● │ ║
+        ║ ├───────────────────────────────┤ ║
+        ║ │ Today                   $0.35 │ ║
+        ║ │ Week                    $1.20 │ ║
+        ║ │ Month                   $4.50 │ ║
+        ║ ├───────────────────────────────┤ ║
+        ║ │ Used                    $0.35 │ ║
+        ║ │ [█░░░░░░░░░░░░░░░░░]   $20.00 │ ║
+        ║ │ upd 18:51                 1/3 │ ║
+        ║ └───────────────────────────────┘ ║
+        ║     ◉ D0      ◉ D1      ◉ D2      ║
+        ╚═══════════════════════════════════╝
+          D0 toggle key⇄account   D1 next   D2 prev
+          ● Wi-Fi dot   1/3 pager = selected key
+```
+
+**2. Account overview** — press **D0**. Rows are summed across *all* keys; `Left`/bar are the
+account-wide balance and burn from `/credits`.
+
+```
+        ╔═══════════════════════════════════╗
+        ║ ┌───────────────────────────────┐ ║
+        ║ │ Account                     ● │ ║
+        ║ ├───────────────────────────────┤ ║
+        ║ │ Today                   $0.35 │ ║
+        ║ │ Week                    $2.60 │ ║
+        ║ │ Month                   $9.80 │ ║
+        ║ ├───────────────────────────────┤ ║
+        ║ │ Left                    $7.61 │ ║
+        ║ │ [██████████░░░░░░░]    $20.00 │ ║
+        ║ │ upd 18:51              2 keys │ ║
+        ║ └───────────────────────────────┘ ║
+        ║     ◉ D0      ◉ D1      ◉ D2      ║
+        ╚═══════════════════════════════════╝
+          Today/Week/Month summed across ALL keys
+          Left = account balance   bar = credits burned (62%)
+          press D0 again to return to the per-key dash
+```
+
+**3. Switching** — the *Loading* emblem paints instantly on any D0/D1/D2 press, so a switch never
+leaves the previous screen up during the (blocking) fetch.
+
+```
+        ╔═══════════════════════════════════╗
+        ║ ┌───────────────────────────────┐ ║
+        ║ │ Account                       │ ║
+        ║ ├───────────────────────────────┤ ║
+        ║ │                               │ ║
+        ║ │            Loading            │ ║
+        ║ │                               │ ║
+        ║ │                               │ ║
+        ║ │                               │ ║
+        ║ └───────────────────────────────┘ ║
+        ║     ◉ D0      ◉ D1      ◉ D2      ║
+        ╚═══════════════════════════════════╝
+          shown instantly on every D0 / D1 / D2 press,
+          then replaced when the fetch returns
+```
+
+**4. Setup / error** — a missing or placeholder config value fails fast with a two-line message
+instead of crashing; a failed refresh instead keeps the last-good numbers with a short reason.
+
+```
+        ╔═══════════════════════════════════╗
+        ║ ┌───────────────────────────────┐ ║
+        ║ │                               │ ║
+        ║ │                               │ ║
+        ║ │         Setup needed          │ ║
+        ║ │        Edit config.py         │ ║
+        ║ │                               │ ║
+        ║ │                               │ ║
+        ║ │                               │ ║
+        ║ └───────────────────────────────┘ ║
+        ║     ◉ D0      ◉ D1      ◉ D2      ║
+        ╚═══════════════════════════════════╝
+          a missing/placeholder config value fails fast here
+```
 
 ## What's here
 
@@ -66,7 +162,7 @@ openrouter-desktop-dash/
     usage_view.py            #    PURE logic: API payloads -> view-model (host-tested)
     keyring.py               #    PURE logic: config -> a cycle of API keys (host-tested)
     openrouter.py            #    OpenRouter API client (GET /key, /credits)
-    buttons.py               #    debounced D1/D2 button reads (page through keys)
+    buttons.py               #    debounced D0/D1/D2 button reads (toggle view, page keys)
     net.py                   #    Wi-Fi connect + NTP time sync
     urequests.py             #    minimal HTTP/HTTPS client (vendored, MIT)
     st7789py.py              #    ST7789 display driver (vendored, MIT)
@@ -170,9 +266,11 @@ OPENROUTER_KEYS = [
 - **D1** (GPIO1) selects the **next** key, **D2** (GPIO2) the **previous** one; the list wraps
   at both ends. A `1/3` pager in the bottom-right corner marks the current key, and each key's
   `name` shows in the header. Switching refreshes that key's usage right away.
+- **D0** (GPIO0, the BOOT button) toggles the [account overview](#screens) — Today/Week/Month
+  summed across every key here, plus your account credit balance. It works with one key too.
 - Each entry is an ordinary read-only inference key. `name` is optional (it falls back to
   `OpenRouter`), but naming your keys is what makes toggling useful. With just one key
-  configured the buttons do nothing and no pager is drawn.
+  configured D1/D2 do nothing and no pager is drawn.
 
 ### 4. Install deps + deploy
 

@@ -147,3 +147,78 @@ def test_title_comes_from_key_name_not_api():
 )
 def test_budget_color_thresholds(used_frac, expected):
     assert usage_view.budget_color(used_frac) == expected
+
+
+# --- build_account_view: the D0 account overview ---------------------------------------
+
+# Two keys as GET /key returns them, plus the single account-wide /credits payload.
+ACCT_KEY_A = {"data": {"usage_daily": 1.0, "usage_weekly": 2.0, "usage_monthly": 5.0}}
+ACCT_KEY_B = {"data": {"usage_daily": 0.5, "usage_weekly": 3.0, "usage_monthly": 7.0}}
+ACCT_CREDITS = {"data": {"total_credits": 20.0, "total_usage": 12.4}}
+
+
+def test_account_sums_usage_across_keys():
+    v = usage_view.build_account_view([ACCT_KEY_A, ACCT_KEY_B], ACCT_CREDITS, key_count=2)
+    assert v["title"] == "Account"
+    assert v["today"] == pytest.approx(1.5)   # 1.0 + 0.5
+    assert v["week"] == pytest.approx(5.0)    # 2.0 + 3.0
+    assert v["month"] == pytest.approx(12.0)  # 5.0 + 7.0
+    assert v["key_count"] == 2
+
+
+def test_account_balance_and_burn_from_credits():
+    v = usage_view.build_account_view([ACCT_KEY_A], ACCT_CREDITS)
+    assert v["total_credits"] == pytest.approx(20.0)
+    assert v["total_usage"] == pytest.approx(12.4)
+    assert v["balance"] == pytest.approx(7.6)      # 20 - 12.4, the "Left" number
+    assert v["remaining"] == pytest.approx(7.6)
+    assert v["budget"] == pytest.approx(20.0)      # bar measures burn of purchased credits
+    assert v["used"] == pytest.approx(12.4)
+    assert v["used_frac"] == pytest.approx(0.62)
+
+
+def test_account_accepts_unwrapped_dicts():
+    v = usage_view.build_account_view(
+        [ACCT_KEY_A["data"], ACCT_KEY_B["data"]], ACCT_CREDITS["data"], key_count=2
+    )
+    assert v["today"] == pytest.approx(1.5)
+    assert v["balance"] == pytest.approx(7.6)
+
+
+def test_account_burn_clamps_when_overspent():
+    over = {"data": {"total_credits": 10.0, "total_usage": 12.0}}
+    v = usage_view.build_account_view([ACCT_KEY_A], over)
+    assert v["used_frac"] == 1.0
+    assert v["balance"] == pytest.approx(-2.0)  # balance itself isn't clamped, only the bar
+
+
+def test_account_no_keys_yields_none_usage_not_zero():
+    # All key fetches failed but /credits came back: show the balance, not fake $0 rows.
+    v = usage_view.build_account_view([], ACCT_CREDITS, key_count=2)
+    assert v["today"] is None
+    assert v["week"] is None
+    assert v["month"] is None
+    assert v["balance"] == pytest.approx(7.6)
+
+
+def test_account_no_credits_yields_no_bar():
+    # /credits failed but keys came back: usage still sums, but there's no budget to draw.
+    v = usage_view.build_account_view([ACCT_KEY_A, ACCT_KEY_B], None, key_count=2)
+    assert v["today"] == pytest.approx(1.5)
+    assert v["balance"] is None
+    assert v["budget"] is None
+    assert v["used_frac"] is None
+
+
+def test_account_zero_credits_yields_no_bar_not_crash():
+    v = usage_view.build_account_view([ACCT_KEY_A], {"data": {"total_credits": 0.0, "total_usage": 0.0}})
+    assert v["used_frac"] is None  # avoids divide-by-zero
+
+
+def test_account_partial_key_field_still_sums():
+    # A key missing usage_weekly contributes 0 to that field but its peers still count.
+    partial = {"data": {"usage_daily": 1.0, "usage_monthly": 4.0}}  # no usage_weekly
+    v = usage_view.build_account_view([partial, ACCT_KEY_B], ACCT_CREDITS, key_count=2)
+    assert v["today"] == pytest.approx(1.5)
+    assert v["week"] == pytest.approx(3.0)   # 0 (missing) + 3.0
+    assert v["month"] == pytest.approx(11.0)

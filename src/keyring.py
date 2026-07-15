@@ -71,6 +71,14 @@ class KeyRing:
     def current(self):
         return self._entries[self._index]
 
+    def entries(self):
+        """A copy of every entry in ring order, for the account rollup (D0 screen).
+
+        Returns a fresh list so a caller iterating all keys can't disturb the ring's
+        selection; the on-screen index is unchanged.
+        """
+        return list(self._entries)
+
     def next(self):
         self._index = (self._index + 1) % len(self._entries)
         return self.current()

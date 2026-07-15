@@ -62,6 +62,67 @@ def budget_color(used_frac):
     return "red"
 
 
+def _sum_across(keys, field):
+    """Sum one usage field over a list of /key payloads. None when no key reports it.
+
+    Each payload may be {'data': {...}} or already unwrapped. A key missing the field
+    contributes nothing; the result is None only if *no* key had a value, so an empty
+    list (all fetches failed) yields None and dash.py shows '—' instead of a fake $0.
+    """
+    total = None
+    for k in keys or ():
+        value = _num(_unwrap(k).get(field))
+        if value is not None:
+            total = value if total is None else total + value
+    return total
+
+
+def build_account_view(keys_data=None, credits_data=None, key_count=None):
+    """Account-wide overview for the D0 screen: usage summed across every configured key
+    plus the account credit balance from GET /api/v1/credits.
+
+    `keys_data` is a list of GET /api/v1/key payloads (one per configured key); today/
+    week/month are the sums of each key's usage_daily/weekly/monthly. `credits_data` is
+    the single account-wide /credits payload — the same for every key — giving
+    total_credits and the account balance (total_credits - total_usage). The budget bar
+    reuses the key view's `used`/`budget`/`used_frac` names (here: credits burned of
+    credits purchased), so dash.py's `_budget_bar` renders it unchanged.
+
+    Any argument may be missing/None (a failed fetch): the corresponding fields come back
+    None and the renderer degrades to '—' rather than inventing zeros.
+    """
+    credits = _unwrap(credits_data) if credits_data is not None else None
+
+    total_credits = None
+    total_usage = None
+    balance = None
+    if credits is not None:
+        total_credits = _num(credits.get("total_credits"))
+        total_usage = _num(credits.get("total_usage"))
+        if total_credits is not None and total_usage is not None:
+            balance = total_credits - total_usage
+
+    used_frac = None
+    if total_credits not in (None, 0) and total_usage is not None:
+        used_frac = min(1.0, max(0.0, total_usage / total_credits))
+
+    return {
+        "title": "Account",
+        "today": _sum_across(keys_data, "usage_daily"),
+        "week": _sum_across(keys_data, "usage_weekly"),
+        "month": _sum_across(keys_data, "usage_monthly"),
+        "total_credits": total_credits,
+        "total_usage": total_usage,
+        "balance": balance,
+        # Bar reuses the key view's field names (see _budget_bar): burn of purchased credits.
+        "used": total_usage,
+        "budget": total_credits,
+        "remaining": balance,
+        "used_frac": used_frac,
+        "key_count": key_count,
+    }
+
+
 def build_view(key_data, credits_data=None, key_name=None):
     """Combine GET /api/v1/key and (optional) GET /api/v1/credits payloads into a view-model.
 

@@ -100,3 +100,26 @@ def test_single_key_ring_stays_put():
     assert ring.next() == {"key": "a", "name": "solo"}
     assert ring.prev() == {"key": "a", "name": "solo"}
     assert ring.position() == (1, 1)
+
+
+def test_entries_returns_all_in_order():
+    ring = keyring.KeyRing([{"key": "a"}, {"key": "b"}, {"key": "c"}])
+    assert ring.entries() == [{"key": "a"}, {"key": "b"}, {"key": "c"}]
+
+
+def test_entries_does_not_move_the_selection():
+    # The account rollup iterates every key; doing so must not shift the on-screen index.
+    ring = keyring.KeyRing([{"key": "a"}, {"key": "b"}, {"key": "c"}])
+    ring.next()
+    before = ring.index
+    ring.entries()
+    assert ring.index == before
+    assert ring.current() == {"key": "b"}
+
+
+def test_entries_is_a_copy():
+    # Mutating the returned list must not corrupt the ring.
+    ring = keyring.KeyRing([{"key": "a"}, {"key": "b"}])
+    got = ring.entries()
+    got.append({"key": "x"})
+    assert len(ring) == 2
