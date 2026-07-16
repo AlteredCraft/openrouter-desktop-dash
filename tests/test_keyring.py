@@ -53,6 +53,47 @@ def test_missing_keys_yields_no_entries():
     assert keyring.normalize_keys(keys=None) == []
 
 
+# --- normalize_wifi: config -> a clean list of {"ssid","password"} entries -------------
+
+def test_multi_network_dicts_are_normalized_in_order():
+    entries = keyring.normalize_wifi(
+        networks=[
+            {"ssid": "office-net", "password": "secret1"},
+            {"ssid": "cafe-net", "password": "secret2"},
+        ]
+    )
+    assert entries == [
+        {"ssid": "office-net", "password": "secret1"},
+        {"ssid": "cafe-net", "password": "secret2"},
+    ]
+
+
+def test_password_defaults_to_empty_for_open_networks():
+    entries = keyring.normalize_wifi(networks=[{"ssid": "Guest"}])
+    assert entries == [{"ssid": "Guest", "password": ""}]
+
+
+def test_placeholder_and_blank_ssids_are_dropped():
+    entries = keyring.normalize_wifi(
+        networks=[
+            {"ssid": "your-wifi-name"},   # untouched template
+            {"ssid": "", "password": "x"},
+            {"ssid": "   ", "password": "x"},
+            {"ssid": "real-net", "password": "pw"},
+        ]
+    )
+    assert entries == [{"ssid": "real-net", "password": "pw"}]
+
+
+def test_non_dict_items_are_ignored():
+    entries = keyring.normalize_wifi(networks=[None, 42, {"ssid": "only"}])
+    assert entries == [{"ssid": "only", "password": ""}]
+
+
+def test_missing_networks_yields_no_entries():
+    assert keyring.normalize_wifi(networks=None) == []
+
+
 def test_untouched_template_yields_no_keys():
     entries = keyring.normalize_keys(keys=[{"key": "sk-or-v1-...", "name": "warp"}])
     assert entries == []

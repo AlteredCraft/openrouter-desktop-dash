@@ -141,13 +141,17 @@ def _poll_account(tft, ring, last_view):
 def main():
     tft = init_display()
 
-    try:
-        ssid = _require("WIFI_SSID")
-        password = _require("WIFI_PASSWORD")
-    except ValueError as exc:
-        print("Config error: set", exc, "in src/config.py")
-        dash.render_error(tft, "Setup needed", "Edit config.py")
-        return
+    networks = keyring.normalize_wifi(getattr(config, "WIFI_NETWORKS", None))
+    if not networks:
+        # Legacy fallback: a single WIFI_SSID / WIFI_PASSWORD pair.
+        try:
+            ssid = _require("WIFI_SSID")
+            password = _require("WIFI_PASSWORD")
+        except ValueError as exc:
+            print("Config error: set WIFI_NETWORKS or", exc, "in src/config.py")
+            dash.render_error(tft, "Setup needed", "Edit config.py")
+            return
+        networks = [{"ssid": ssid, "password": password}]
 
     # One or many keys, all from OPENROUTER_KEYS; page through them with the buttons.
     ring = keyring.normalize_keys(getattr(config, "OPENROUTER_KEYS", None))
@@ -158,12 +162,26 @@ def main():
         dash.render_error(tft, "Setup needed", "Add API key")
         return
 
+    def _on_try(ssid, index, total):
+        dash.render_error(
+            tft, "Connecting", "Trying %s" % ssid, "%d nets to try" % total
+        )
+        # The ESP32 caches Wi-Fi creds and auto-connects the moment the interface comes
+        # up, so connect() can return instantly — hold the "Trying <ssid>" frame long
+        # enough to read it instead of flashing straight to the dash.
+        time.sleep_ms(400)
+
     dash.render_error(tft, "Connecting", "Wi-Fi...")
+    wifi_timeout = getattr(config, "WIFI_TIMEOUT_SECONDS", 20)
     try:
-        net.connect(ssid, password)
+        wlan, ssid = net.connect_any(
+            networks, timeout_s=wifi_timeout, on_try=_on_try
+        )
     except OSError as exc:
-        print("Wi-Fi failed for", repr(ssid) + ":", exc)
-        dash.render_error(tft, "No Wi-Fi", ssid, "Check config.py")
+        print("Wi-Fi failed for all networks:", exc)
+        dash.render_error(
+            tft, "No Wi-Fi", "tried %d" % len(networks), "Check config.py"
+        )
         return
     net.sync_time()  # best-effort; the clock is cosmetic
 

@@ -7,6 +7,9 @@ D1/D2 buttons to KeyRing.next()/prev(); dash.py draws position() as a "1/3" page
 Keys come from config as OPENROUTER_KEYS, a list of entries — each a
 {"key", "name"} dict or a bare "sk-or-..." string:
   OPENROUTER_KEYS = [{"key": "sk-or-...", "name": "warp"}, {"key": "sk-or-...", "name": "prod"}]
+
+Wi-Fi networks come from config as WIFI_NETWORKS, a list of {"ssid", "password"}
+dicts (see normalize_wifi). The dash tries each in order until one connects.
 """
 
 
@@ -39,6 +42,26 @@ def normalize_keys(keys=None):
             continue
         entries.append({"key": key, "name": name or None})
 
+    return entries
+
+
+def normalize_wifi(networks=None):
+    """Build a list of {"ssid", "password"} entries from config's WIFI_NETWORKS.
+
+    `networks` is the WIFI_NETWORKS list — each item a {"ssid", "password"} dict
+    (password optional, defaults to "" for open networks). Blank/placeholder SSIDs
+    are dropped, so an untouched template contributes no networks. Returns the
+    usable networks in config order; the list may be empty, in which case main.py
+    falls back to the legacy WIFI_SSID/WIFI_PASSWORD pair before complaining.
+    """
+    entries = []
+    for item in networks or ():
+        if not isinstance(item, dict):
+            continue
+        ssid, password = item.get("ssid"), item.get("password", "")
+        if _blank_or_placeholder(ssid):
+            continue
+        entries.append({"ssid": ssid, "password": password or ""})
     return entries
 
 

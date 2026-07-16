@@ -234,14 +234,22 @@ cp src/config.example.py src/config.py
 Then edit `src/config.py`:
 
 ```python
-WIFI_SSID = "your-wifi-name"          # 2.4 GHz only — the ESP32-S3 has no 5 GHz radio
-WIFI_PASSWORD = "your-wifi-password"
+WIFI_NETWORKS = [                     # one or more {"ssid","password"} networks
+    {"ssid": "your-wifi-name", "password": "your-wifi-password"},
+    # {"ssid": "your-second-wifi", "password": "its-password"},
+]
+WIFI_TIMEOUT_SECONDS = 20              # optional; per-network wait before trying the next
 OPENROUTER_KEYS = [                    # one or more normal inference keys from
     {"key": "sk-or-v1-...", "name": "warp"},   # https://openrouter.ai/settings/keys
 ]                                     # `name` is the header label (see "Header name" below)
 REFRESH_SECONDS = 60                  # optional
 TZ_OFFSET_HOURS = 0                   # optional; e.g. -7 for PDT (NTP syncs UTC)
 ```
+
+`WIFI_NETWORKS` is a list, so the dash tries each network in order until one connects — list
+several and it'll come up on whichever is in range (handy when you move the board between
+sites). `password` may be `""` for an open network. A single `WIFI_SSID` / `WIFI_PASSWORD`
+pair still works as a legacy fallback if `WIFI_NETWORKS` is unset or empty.
 
 Any OpenRouter inference key works — the dash only *reads* usage. Don't use a
 management/provisioning key here: it isn't needed, and it can create/delete keys. List more

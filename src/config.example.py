@@ -9,8 +9,22 @@
 # on-screen "Setup needed" message if any required value below is still a placeholder.
 
 # --- Wi-Fi (2.4 GHz only — the ESP32-S3 has no 5 GHz radio) ---
-WIFI_SSID = "your-wifi-name"
-WIFI_PASSWORD = "your-wifi-password"
+# One or more networks; the dash tries each in order until one connects, so it
+# comes up on whichever is in range (handy when you move the board between sites).
+# Each entry is a {"ssid","password"} dict; `password` may be "" for an open network.
+WIFI_NETWORKS = [
+    {"ssid": "your-wifi-name", "password": "your-wifi-password"},
+    # {"ssid": "your-second-wifi", "password": "its-password"},
+]
+
+# Legacy single-network form (used only if WIFI_NETWORKS is unset or empty):
+# WIFI_SSID = "your-wifi-name"
+# WIFI_PASSWORD = "your-wifi-password"
+
+# How long to wait on each network before giving up and trying the next one (seconds).
+# Lower it if you have several networks and want a faster fail-over; raise it if a
+# network is slow to associate. Per-network, not total — total wait is this × N.
+WIFI_TIMEOUT_SECONDS = 20
 
 # --- OpenRouter (required) ---
 # One or more OpenRouter keys, listed here as OPENROUTER_KEYS. Each is a normal
