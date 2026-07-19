@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>04 · Drawing to the screen — Desk Dash field guide</title>
+<meta name="description" content="A visual guide to how pixels reach glass without a browser, GPU or HDMI: the ST7789's on-panel framebuffer, SPI pixel windows, RGB565 color, bitmap fonts, and how dash.py hand-places every glyph.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%230b0e14'/%3E%3Crect x='2' y='3' width='12' height='8' rx='1' fill='%232fd8f2'/%3E%3Ccircle cx='5' cy='13.5' r='1' fill='%23667089'/%3E%3Ccircle cx='8' cy='13.5' r='1' fill='%23667089'/%3E%3Ccircle cx='11' cy='13.5' r='1' fill='%23667089'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+
+<nav class="nav">
+  <div class="wrap">
+    <a class="nav-logo" href="index.html"><span class="tick">▚</span> desk-dash<span class="logo-sub"> · field guide</span></a>
+    <div class="nav-links">
+      <a href="board.html"><span class="n">01</span><span class="label">The Board</span></a>
+      <a href="micropython.html"><span class="n">02</span><span class="label">MicroPython</span></a>
+      <a href="app.html"><span class="n">03</span><span class="label">The App</span></a>
+      <a class="active" href="drawing.html"><span class="n">04</span><span class="label">Drawing</span></a>
+      <a class="nav-gh" href="https://github.com/AlteredCraft/openrouter-desktop-dash" title="Source on GitHub">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+        <span class="label">GitHub</span>
+      </a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="kicker"><span class="chnum">Chapter 04 ·</span> Graphics</p>
+    <h1>Drawing to the screen</h1>
+    <p class="lede">On the web you <b>describe</b> a page and a browser, an OS, a GPU and an HDMI
+    cable do the actual drawing. This board has none of those — <b>no browser, no GPU, no
+    compositor, no HDMI</b>. The app puts every pixel on the glass itself. This chapter is the
+    visual guide: how a screen normally gets drawn, and exactly how this app does it instead.</p>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <section>
+    <p class="section-kicker">The big picture</p>
+    <h2>Where's the HDMI?</h2>
+    <p class="mute">There isn't one — and that changes everything about how you draw. Three
+    pipelines, same goal. Follow each column top to bottom, and watch where the cyan box (the
+    place the finished picture actually lives) sits relative to the cable.</p>
+
+    <div class="diagram wide">
+      <svg viewBox="0 0 860 528" role="img" aria-label="Three drawing pipelines compared. A web page: your HTML and CSS go through the browser engine into a GPU framebuffer, then an HDMI cable streams every pixel to a dumb panel 60 times a second. A desktop app: draw calls go through a UI toolkit into the same GPU framebuffer and HDMI stream. This gadget: dash.py hands text and rectangles to the st7789py driver, which sends only changed pixels over a 40 megahertz SPI wire into the ST7789 controller's own memory on the panel, and the panel refreshes itself from that memory.">
+        <defs>
+          <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="#4a5570"/>
+          </marker>
+        </defs>
+
+        <!-- column A: the web page -->
+        <text class="dg-title" x="140" y="28" text-anchor="middle">A · The web page</text>
+        <text class="dg-sub" x="140" y="46" text-anchor="middle">you ship a description</text>
+
+        <rect class="dg-box pure" x="10" y="64" width="260" height="64" rx="10"/>
+        <text class="dg-tag pure" x="26" y="83">YOU</text>
+        <text class="dg-title" x="26" y="102">your code</text>
+        <text class="dg-sub" x="26" y="118">HTML · CSS · JS — no pixels yet</text>
+        <line class="dg-arrow" x1="140" y1="128" x2="140" y2="156"/>
+
+        <rect class="dg-box hw" x="10" y="160" width="260" height="64" rx="10"/>
+        <text class="dg-tag hw" x="26" y="179">ENGINE</text>
+        <text class="dg-title" x="26" y="198">browser</text>
+        <text class="dg-sub" x="26" y="214">layout · style · paint</text>
+        <line class="dg-arrow" x1="140" y1="224" x2="140" y2="252"/>
+
+        <rect class="dg-box cloud" x="10" y="256" width="260" height="64" rx="10"/>
+        <text class="dg-tag cloud" x="26" y="275">FRAMEBUFFER</text>
+        <text class="dg-title" x="26" y="294">GPU + compositor</text>
+        <text class="dg-sub" x="26" y="310">the picture lives here, in RAM</text>
+        <line class="dg-arrow" x1="140" y1="320" x2="140" y2="348"/>
+
+        <rect class="dg-box hw" x="10" y="352" width="260" height="64" rx="10"/>
+        <text class="dg-tag hw" x="26" y="371">LINK</text>
+        <text class="dg-title" x="26" y="390">HDMI cable</text>
+        <text class="dg-sub" x="26" y="406">every pixel, 60×/s — ≈3 Gbit/s</text>
+        <line class="dg-arrow" x1="140" y1="416" x2="140" y2="444"/>
+
+        <rect class="dg-box hw" x="10" y="448" width="260" height="64" rx="10"/>
+        <text class="dg-tag hw" x="26" y="467">GLASS</text>
+        <text class="dg-title" x="26" y="486">dumb panel</text>
+        <text class="dg-sub" x="26" y="502">shows a frame, forgets it</text>
+
+        <!-- column B: the desktop app -->
+        <text class="dg-title" x="430" y="28" text-anchor="middle">B · The desktop app</text>
+        <text class="dg-sub" x="430" y="46" text-anchor="middle">you draw, the OS delivers</text>
+
+        <rect class="dg-box pure" x="300" y="64" width="260" height="64" rx="10"/>
+        <text class="dg-tag pure" x="316" y="83">YOU</text>
+        <text class="dg-title" x="316" y="102">your code</text>
+        <text class="dg-sub" x="316" y="118">draw calls: rects, text, images</text>
+        <line class="dg-arrow" x1="430" y1="128" x2="430" y2="156"/>
+
+        <rect class="dg-box hw" x="300" y="160" width="260" height="64" rx="10"/>
+        <text class="dg-tag hw" x="316" y="179">TOOLKIT</text>
+        <text class="dg-title" x="316" y="198">UI framework</text>
+        <text class="dg-sub" x="316" y="214">turns widgets into pixels</text>
+        <line class="dg-arrow" x1="430" y1="224" x2="430" y2="252"/>
+
+        <rect class="dg-box cloud" x="300" y="256" width="260" height="64" rx="10"/>
+        <text class="dg-tag cloud" x="316" y="275">FRAMEBUFFER</text>
+        <text class="dg-title" x="316" y="294">GPU + compositor</text>
+        <text class="dg-sub" x="316" y="310">your window + everyone else's</text>
+        <line class="dg-arrow" x1="430" y1="320" x2="430" y2="348"/>
+
+        <rect class="dg-box hw" x="300" y="352" width="260" height="64" rx="10"/>
+        <text class="dg-tag hw" x="316" y="371">LINK</text>
+        <text class="dg-title" x="316" y="390">HDMI cable</text>
+        <text class="dg-sub" x="316" y="406">every pixel, 60×/s — ≈3 Gbit/s</text>
+        <line class="dg-arrow" x1="430" y1="416" x2="430" y2="444"/>
+
+        <rect class="dg-box hw" x="300" y="448" width="260" height="64" rx="10"/>
+        <text class="dg-tag hw" x="316" y="467">GLASS</text>
+        <text class="dg-title" x="316" y="486">dumb panel</text>
+        <text class="dg-sub" x="316" y="502">shows a frame, forgets it</text>
+
+        <!-- column C: this gadget -->
+        <text class="dg-title" x="720" y="28" text-anchor="middle">C · This gadget</text>
+        <text class="dg-sub" x="720" y="46" text-anchor="middle">you own every pixel</text>
+
+        <rect class="dg-box pure" x="590" y="64" width="260" height="64" rx="10"/>
+        <text class="dg-tag pure" x="606" y="83">YOU</text>
+        <text class="dg-title" x="606" y="102">dash.py</text>
+        <text class="dg-sub" x="606" y="118">hand-placed rows · budget bar</text>
+        <line class="dg-arrow" x1="624" y1="128" x2="624" y2="156"/>
+        <text class="dg-alabel" x="640" y="146">text("Today", 8, 20)</text>
+
+        <rect class="dg-box hw" x="590" y="160" width="260" height="64" rx="10"/>
+        <text class="dg-tag hw" x="606" y="179">DRIVER</text>
+        <text class="dg-title" x="606" y="198">st7789py.py</text>
+        <text class="dg-sub" x="606" y="214">glyphs &amp; fills → RGB565 rects</text>
+        <line class="dg-arrow" x1="624" y1="224" x2="624" y2="252"/>
+        <text class="dg-alabel" x="640" y="242">set window + pixel stream</text>
+
+        <rect class="dg-box hw" x="590" y="256" width="260" height="64" rx="10"/>
+        <text class="dg-tag hw" x="606" y="275">LINK</text>
+        <text class="dg-title" x="606" y="294">SPI wire @ 40 MHz</text>
+        <text class="dg-sub" x="606" y="310">3 pins out of the ESP32-S3</text>
+        <line class="dg-arrow" x1="624" y1="320" x2="624" y2="348"/>
+        <text class="dg-alabel" x="640" y="338">only when something changes</text>
+
+        <rect class="dg-box cloud" x="590" y="352" width="260" height="64" rx="10"/>
+        <text class="dg-tag cloud" x="606" y="371">FRAMEBUFFER</text>
+        <text class="dg-title" x="606" y="390">ST7789 GRAM</text>
+        <text class="dg-sub" x="606" y="406">the only copy of the picture</text>
+        <line class="dg-arrow" x1="624" y1="416" x2="624" y2="444"/>
+        <text class="dg-alabel" x="640" y="434">self-refresh, ~60 Hz, no code</text>
+
+        <rect class="dg-box hw" x="590" y="448" width="260" height="64" rx="10"/>
+        <text class="dg-tag hw" x="606" y="467">GLASS</text>
+        <text class="dg-title" x="606" y="486">240×135 TFT</text>
+        <text class="dg-sub" x="606" y="502">remembers until overwritten</text>
+      </svg>
+      <div class="dg-legend">
+        <span class="pure">the code you write</span>
+        <span>machinery in between</span>
+        <span class="cloud">where the picture lives</span>
+      </div>
+    </div>
+
+    <div class="callout">
+      <span class="sign">The punchline</span>
+      <p>In pipelines A and B the picture lives <b>inside the computer</b>, so a cable must
+      re-send all of it, 60 times a second, forever — a static desktop still costs ≈3 Gbit/s of
+      HDMI traffic. In pipeline C the framebuffer sits <b>on the far side of the wire</b>, inside
+      the display controller itself. Send nothing and the picture simply stays. The app only ever
+      transmits <em>changes</em>, and the panel handles its own refresh.</p>
+    </div>
+
+    <div class="grid cols-4">
+      <div class="spec"><span class="v">0</span><span class="k">GPUs · compositors · HDMI</span></div>
+      <div class="spec"><span class="v">64,800 B</span><span class="k">one full frame on the wire</span></div>
+      <div class="spec"><span class="v">≈13 ms</span><span class="k">full repaint @ 40 MHz SPI</span></div>
+      <div class="spec"><span class="v">512 B</span><span class="k">biggest pixel buffer in RAM</span></div>
+    </div>
+    <p class="mute">That last number is the strangest one: the full picture <em>never exists in
+    the ESP32's memory</em>. A whole frame would be 240 × 135 × 2 bytes = 64,800 — but the driver
+    streams everything through scratch buffers of at most 512 bytes. The only complete copy of
+    what you see is in the panel's own RAM. (The SPI bus here is even wired without a MISO line —
+    the display is a one-way street we write to and never read back.)</p>
+  </section>
+
+  <section>
+    <p class="section-kicker">The mechanism</p>
+    <h2>A panel with a photographic memory</h2>
+    <p class="mute">The glass has a chip bonded onto it — the Sitronix <b>ST7789</b> — with
+    enough RAM (GRAM) for 240×320 pixels and a tiny state machine. Drawing means one thing:
+    writing bytes into that RAM through a three-command protocol. The controller repaints the
+    liquid crystal from GRAM on its own, about 60 times a second, powered but unbothered by
+    our code.</p>
+
+    <div class="split">
+      <div class="diagram portrait" style="margin:0">
+        <svg viewBox="0 0 430 404" role="img" aria-label="The ST7789's graphics RAM drawn as a rectangle, with the smaller visible 240 by 135 window inside it at offset 40,53, and a highlighted draw window inside that. Three steps: CASET picks the columns, RASET picks the rows, RAMWR streams pixels which the controller walks left to right, top to bottom.">
+          <text class="dg-title sm" x="215" y="24" text-anchor="middle">ST7789 GRAM — on-panel memory</text>
+          <text class="dg-sub sm" x="215" y="42" text-anchor="middle">sized for 240×320; our glass shows a window into it</text>
+
+          <rect x="31" y="64" width="368" height="276" rx="8" fill="#0d111b" stroke="#2a3247"/>
+          <text class="dg-alabel" x="43" y="82">unused margin (hidden)</text>
+
+          <rect x="77" y="125" width="276" height="155" rx="4" fill="#10182a" stroke="#2fd8f2"/>
+          <text class="dg-alabel" x="89" y="143" fill="#2fd8f2">visible 240×135 · offset (40, 53)</text>
+
+          <rect x="146" y="171" width="138" height="69" fill="rgba(47,216,242,0.12)" stroke="#2fd8f2" stroke-dasharray="5 4"/>
+          <line class="dg-arrow" x1="154" y1="182" x2="274" y2="182"/>
+          <line class="dg-arrow" x1="154" y1="203" x2="274" y2="203"/>
+          <line class="dg-arrow" x1="154" y1="224" x2="274" y2="224"/>
+          <text class="dg-alabel" x="215" y="256" text-anchor="middle">pixels stream in; the controller</text>
+          <text class="dg-alabel" x="215" y="270" text-anchor="middle">walks the draw window itself</text>
+
+          <text class="dg-alabel" x="215" y="362" text-anchor="middle"><tspan class="dg-n">1</tspan> · CASET — pick the columns (x0…x1)</text>
+          <text class="dg-alabel" x="215" y="378" text-anchor="middle"><tspan class="dg-n">2</tspan> · RASET — pick the rows (y0…y1)</text>
+          <text class="dg-alabel" x="215" y="394" text-anchor="middle"><tspan class="dg-n">3</tspan> · RAMWR — stream w×h pixels, no coordinates needed</text>
+        </svg>
+      </div>
+      <div>
+        <p>Every draw in the entire app is this one move: <b>declare a rectangle, then pour
+        pixels into it.</b> After <code>RAMWR</code>, the controller advances its own write
+        cursor left→right, top→bottom inside the window — the ESP32 sends raw color data with
+        no addresses attached.</p>
+        <p>The abridged heart of
+        <a href="https://github.com/AlteredCraft/openrouter-desktop-dash/blob/main/src/st7789py.py"><code>st7789py.py</code></a>:</p>
+<pre><code><span class="k">def</span> _set_window(self, x0, y0, x1, y1):
+    <span class="c"># our glass is a window into the bigger GRAM,</span>
+    <span class="c"># hence the (40, 53) offset in landscape</span>
+    self._write(CASET, pack(<span class="s">"&gt;HH"</span>, x0+40, x1+40))
+    self._write(RASET, pack(<span class="s">"&gt;HH"</span>, y0+53, y1+53))
+    self._write(RAMWR)              <span class="c"># "pixels follow"</span>
+
+<span class="k">def</span> fill_rect(self, x, y, w, h, color):
+    self._set_window(x, y, x+w-1, y+h-1)
+    pixel = pack(<span class="s">"&gt;H"</span>, color)      <span class="c"># 2 bytes, RGB565</span>
+    <span class="k">for</span> chunk <span class="k">in</span> chunks(pixel * (w*h), 512):
+        self.spi.write(chunk)       <span class="c"># fire and forget</span></code></pre>
+      </div>
+    </div>
+
+    <h3>Everything is a rectangle</h3>
+    <p class="mute">Every primitive the dash uses reduces to <code>_set_window</code> + a stream.
+    That's the whole graphics API:</p>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Call in <code>dash.py</code></th><th>Window it opens</th><th class="num">Bytes streamed</th></tr></thead>
+        <tbody>
+          <tr><td><code>pixel(x, y, c)</code></td><td>1 × 1</td><td class="num">2</td></tr>
+          <tr><td><code>hline(x, y, w, c)</code></td><td>w × 1</td><td class="num">2·w</td></tr>
+          <tr><td><code>fill_rect(x, y, w, h, c)</code></td><td>w × h</td><td class="num">2·w·h — one pixel, repeated</td></tr>
+          <tr><td><code>text(font, s, x, y, fg, bg)</code></td><td>16 × 8, twice per glyph</td><td class="num">256 per strip</td></tr>
+          <tr><td><code>fill(c)</code> — clear the screen</td><td>240 × 135</td><td class="num">64,800</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="mute">Even outlines and diagonals obey the rule: <code>rect()</code> is four
+    skinny filled rectangles, and <code>line()</code> is Bresenham stepping — a fresh 1×1 window
+    <em>per pixel</em>, which is why diagonal lines are slow and the dash's layout uses none.</p>
+  </section>
+
+  <section>
+    <p class="section-kicker">The vocabulary</p>
+    <h2>Colors are 16 bits, letters are 32 bytes</h2>
+    <p class="mute">No color names, no font files. A color is one 16-bit number in <b>RGB565</b>
+    encoding — 5 bits red, 6 green (your eye resolves green best), 5 blue — two bytes on the
+    wire per pixel:</p>
+
+    <div class="diagram portrait">
+      <svg viewBox="0 0 430 96" role="img" aria-label="The 16 bits of an RGB565 color: bits 15 to 11 are red, bits 10 to 5 are green, bits 4 to 0 are blue.">
+        <text class="dg-alabel" x="23" y="16">bit 15</text>
+        <text class="dg-alabel" x="407" y="16" text-anchor="end">bit 0</text>
+        <g>
+          <rect x="23"  y="24" width="24" height="30" fill="#0d111b" stroke="#ff5d5d"/>
+          <rect x="47"  y="24" width="24" height="30" fill="#0d111b" stroke="#ff5d5d"/>
+          <rect x="71"  y="24" width="24" height="30" fill="#0d111b" stroke="#ff5d5d"/>
+          <rect x="95"  y="24" width="24" height="30" fill="#0d111b" stroke="#ff5d5d"/>
+          <rect x="119" y="24" width="24" height="30" fill="#0d111b" stroke="#ff5d5d"/>
+          <rect x="143" y="24" width="24" height="30" fill="#0d111b" stroke="#34d97b"/>
+          <rect x="167" y="24" width="24" height="30" fill="#0d111b" stroke="#34d97b"/>
+          <rect x="191" y="24" width="24" height="30" fill="#0d111b" stroke="#34d97b"/>
+          <rect x="215" y="24" width="24" height="30" fill="#0d111b" stroke="#34d97b"/>
+          <rect x="239" y="24" width="24" height="30" fill="#0d111b" stroke="#34d97b"/>
+          <rect x="263" y="24" width="24" height="30" fill="#0d111b" stroke="#34d97b"/>
+          <rect x="287" y="24" width="24" height="30" fill="#0d111b" stroke="#5da9ff"/>
+          <rect x="311" y="24" width="24" height="30" fill="#0d111b" stroke="#5da9ff"/>
+          <rect x="335" y="24" width="24" height="30" fill="#0d111b" stroke="#5da9ff"/>
+          <rect x="359" y="24" width="24" height="30" fill="#0d111b" stroke="#5da9ff"/>
+          <rect x="383" y="24" width="24" height="30" fill="#0d111b" stroke="#5da9ff"/>
+        </g>
+        <text class="dg-alabel" x="83"  y="74" text-anchor="middle" fill="#ff5d5d">red × 5</text>
+        <text class="dg-alabel" x="215" y="74" text-anchor="middle" fill="#34d97b">green × 6</text>
+        <text class="dg-alabel" x="347" y="74" text-anchor="middle" fill="#5da9ff">blue × 5</text>
+        <text class="dg-alabel" x="215" y="92" text-anchor="middle">65,536 colors · 2 bytes per pixel</text>
+      </svg>
+    </div>
+
+<pre><code><span class="k">def</span> color565(r, g, b):        <span class="c"># 0–255 each → one 16-bit number</span>
+    <span class="k">return</span> (r &amp; <span class="s">0xF8</span>) &lt;&lt; 8 | (g &amp; <span class="s">0xFC</span>) &lt;&lt; 3 | b &gt;&gt; 3
+
+_DIM = color565(90, 90, 90)   <span class="c"># dash.py mixes its own grays &amp; orange</span></code></pre>
+
+    <p>Text works the same way — there is no font engine, so the app ships a bitmap font:
+    <code>vga2_bold_16x16.py</code>, a PC-BIOS typeface where every character is a 16×16 grid of
+    bits packed into 32 bytes. To draw a glyph, the driver expands each bit into a foreground or
+    background pixel and blits it as two 16×8 strips. These are the actual bytes for
+    <code>$</code> — the most-drawn glyph on this dashboard:</p>
+
+    <div class="split">
+<pre style="margin:0"><code><span class="c"># font.FONT, 32 bytes at ord('$')·32</span>
+03 c0  <span class="c">■ 0000001111000000</span>
+03 c0  <span class="c">■ 0000001111000000</span>
+07 e0  <span class="c">■ 0000011111100000</span>
+1e 78  <span class="c">■ 0001111001111000</span>
+3c 3c  <span class="c">■ 0011110000111100</span>
+3c 00  <span class="c">■ 0011110000000000</span>
+1e 00  <span class="c">■ 0001111000000000</span>
+07 e0  <span class="c">■ 0000011111100000</span>
+00 78  <span class="c">■ 0000000001111000</span>
+00 3c  <span class="c">■ 0000000000111100</span>
+3c 3c  <span class="c">■ 0011110000111100</span>
+1e 78  <span class="c">■ 0001111001111000</span>
+07 e0  <span class="c">■ 0000011111100000</span>
+03 c0  <span class="c">■ 0000001111000000</span>
+03 c0  <span class="c">■ 0000001111000000</span>
+00 00  <span class="c">■ 0000000000000000</span></code></pre>
+      <div>
+        <figure class="panel" style="margin:0">
+          <svg viewBox="0 0 16 16" style="display:block;width:100%;max-width:260px;margin:0 auto;shape-rendering:crispEdges" role="img" aria-label="The dollar-sign glyph rendered as cyan pixels on black, exactly as it appears on the TFT.">
+            <rect width="16" height="16" fill="#000"/>
+            <g fill="#2fd8f2"><rect x="6" y="0" width="1" height="1"/><rect x="7" y="0" width="1" height="1"/><rect x="8" y="0" width="1" height="1"/><rect x="9" y="0" width="1" height="1"/><rect x="6" y="1" width="1" height="1"/><rect x="7" y="1" width="1" height="1"/><rect x="8" y="1" width="1" height="1"/><rect x="9" y="1" width="1" height="1"/><rect x="5" y="2" width="1" height="1"/><rect x="6" y="2" width="1" height="1"/><rect x="7" y="2" width="1" height="1"/><rect x="8" y="2" width="1" height="1"/><rect x="9" y="2" width="1" height="1"/><rect x="10" y="2" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/><rect x="4" y="3" width="1" height="1"/><rect x="5" y="3" width="1" height="1"/><rect x="6" y="3" width="1" height="1"/><rect x="9" y="3" width="1" height="1"/><rect x="10" y="3" width="1" height="1"/><rect x="11" y="3" width="1" height="1"/><rect x="12" y="3" width="1" height="1"/><rect x="2" y="4" width="1" height="1"/><rect x="3" y="4" width="1" height="1"/><rect x="4" y="4" width="1" height="1"/><rect x="5" y="4" width="1" height="1"/><rect x="10" y="4" width="1" height="1"/><rect x="11" y="4" width="1" height="1"/><rect x="12" y="4" width="1" height="1"/><rect x="13" y="4" width="1" height="1"/><rect x="2" y="5" width="1" height="1"/><rect x="3" y="5" width="1" height="1"/><rect x="4" y="5" width="1" height="1"/><rect x="5" y="5" width="1" height="1"/><rect x="3" y="6" width="1" height="1"/><rect x="4" y="6" width="1" height="1"/><rect x="5" y="6" width="1" height="1"/><rect x="6" y="6" width="1" height="1"/><rect x="5" y="7" width="1" height="1"/><rect x="6" y="7" width="1" height="1"/><rect x="7" y="7" width="1" height="1"/><rect x="8" y="7" width="1" height="1"/><rect x="9" y="7" width="1" height="1"/><rect x="10" y="7" width="1" height="1"/><rect x="9" y="8" width="1" height="1"/><rect x="10" y="8" width="1" height="1"/><rect x="11" y="8" width="1" height="1"/><rect x="12" y="8" width="1" height="1"/><rect x="10" y="9" width="1" height="1"/><rect x="11" y="9" width="1" height="1"/><rect x="12" y="9" width="1" height="1"/><rect x="13" y="9" width="1" height="1"/><rect x="2" y="10" width="1" height="1"/><rect x="3" y="10" width="1" height="1"/><rect x="4" y="10" width="1" height="1"/><rect x="5" y="10" width="1" height="1"/><rect x="10" y="10" width="1" height="1"/><rect x="11" y="10" width="1" height="1"/><rect x="12" y="10" width="1" height="1"/><rect x="13" y="10" width="1" height="1"/><rect x="3" y="11" width="1" height="1"/><rect x="4" y="11" width="1" height="1"/><rect x="5" y="11" width="1" height="1"/><rect x="6" y="11" width="1" height="1"/><rect x="9" y="11" width="1" height="1"/><rect x="10" y="11" width="1" height="1"/><rect x="11" y="11" width="1" height="1"/><rect x="12" y="11" width="1" height="1"/><rect x="5" y="12" width="1" height="1"/><rect x="6" y="12" width="1" height="1"/><rect x="7" y="12" width="1" height="1"/><rect x="8" y="12" width="1" height="1"/><rect x="9" y="12" width="1" height="1"/><rect x="10" y="12" width="1" height="1"/><rect x="6" y="13" width="1" height="1"/><rect x="7" y="13" width="1" height="1"/><rect x="8" y="13" width="1" height="1"/><rect x="9" y="13" width="1" height="1"/><rect x="6" y="14" width="1" height="1"/><rect x="7" y="14" width="1" height="1"/><rect x="8" y="14" width="1" height="1"/><rect x="9" y="14" width="1" height="1"/></g>
+          </svg>
+          <figcaption><b>bits → pixels.</b> Each <code>1</code> becomes a foreground pixel, each
+          <code>0</code> a background pixel — 256 color bytes per 16×8 strip, blitted through the
+          same set-window move as everything else.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="callout">
+      <span class="sign">Detail that bites</span>
+      <p>Because every glyph paints its <b>own background</b>, drawing new text over old text
+      cleanly replaces it — no clearing needed. But the driver silently <b>drops any glyph that
+      would cross the right edge</b>, so <code>dash.py</code> pre-clips long strings and marks
+      them with a trailing <code>~</code> (see <code>_clip()</code>).</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="section-kicker">Our layout engine</p>
+    <h2>No CSS — a ruler and constants</h2>
+    <p class="mute">A web page reflows; this screen is surveyed. The font is 16×16, so the
+    240×135 panel is a grid of <b>15 columns × 8 rows</b>, and every coordinate in
+    <a href="https://github.com/AlteredCraft/openrouter-desktop-dash/blob/main/src/dash.py"><code>dash.py</code></a>
+    is a hand-picked constant. This is the per-key dash with its actual coordinates:</p>
+
+    <div class="diagram portrait">
+      <svg viewBox="0 0 430 252" role="img" aria-label="The dashboard screen with rulers: x coordinates 0, 8, 104, 224 and 240 marked along the top; y coordinates 0, 20, 38, 56, 76, 96, 112 and 135 marked along the left; dashed guides show the text gutter at x equals 8 and the value column at x equals 104.">
+        <!-- x ruler -->
+        <text class="dg-alabel" x="46"  y="16" text-anchor="middle">0</text>
+        <text class="dg-alabel" x="58"  y="16" text-anchor="middle">8</text>
+        <text class="dg-alabel" x="202" y="16" text-anchor="middle">104</text>
+        <text class="dg-alabel" x="382" y="16" text-anchor="middle">224</text>
+        <text class="dg-alabel" x="418" y="16" text-anchor="middle">240</text>
+        <line class="dg-line" x1="46"  y1="22" x2="46"  y2="32"/>
+        <line class="dg-line" x1="58"  y1="22" x2="58"  y2="32"/>
+        <line class="dg-line" x1="202" y1="22" x2="202" y2="32"/>
+        <line class="dg-line" x1="382" y1="22" x2="382" y2="32"/>
+        <line class="dg-line" x1="406" y1="22" x2="406" y2="32"/>
+        <!-- y ruler -->
+        <text class="dg-alabel" x="36" y="38"  text-anchor="end">0</text>
+        <text class="dg-alabel" x="36" y="68"  text-anchor="end">20</text>
+        <text class="dg-alabel" x="36" y="95"  text-anchor="end">38</text>
+        <text class="dg-alabel" x="36" y="122" text-anchor="end">56</text>
+        <text class="dg-alabel" x="36" y="152" text-anchor="end">76</text>
+        <text class="dg-alabel" x="36" y="182" text-anchor="end">96</text>
+        <text class="dg-alabel" x="36" y="206" text-anchor="end">112</text>
+        <text class="dg-alabel" x="36" y="240" text-anchor="end">135</text>
+        <!-- screen mock at 1.5x, same coordinates dash.py uses -->
+        <g transform="translate(46,34) scale(1.5)">
+          <rect width="240" height="135" fill="#000"/>
+          <text class="tft-t" x="8" y="13" textLength="64" lengthAdjust="spacingAndGlyphs">warp</text>
+          <rect x="224" y="2" width="12" height="12" fill="#34d97b"/>
+          <line x1="0" y1="18.5" x2="240" y2="18.5" stroke="#4b5266"/>
+          <text class="tft-t" x="8" y="33" textLength="80" lengthAdjust="spacingAndGlyphs">Today</text>
+          <text class="tft-t cyan" x="104" y="33" textLength="80" lengthAdjust="spacingAndGlyphs">$0.35</text>
+          <text class="tft-t" x="8" y="51" textLength="64" lengthAdjust="spacingAndGlyphs">Week</text>
+          <text class="tft-t cyan" x="104" y="51" textLength="80" lengthAdjust="spacingAndGlyphs">$1.20</text>
+          <text class="tft-t" x="8" y="69" textLength="80" lengthAdjust="spacingAndGlyphs">Month</text>
+          <text class="tft-t cyan" x="104" y="69" textLength="80" lengthAdjust="spacingAndGlyphs">$4.50</text>
+          <line x1="0" y1="74.5" x2="240" y2="74.5" stroke="#4b5266"/>
+          <text class="tft-t" x="8" y="89" textLength="64" lengthAdjust="spacingAndGlyphs">Used</text>
+          <text class="tft-t cyan" x="104" y="89" textLength="80" lengthAdjust="spacingAndGlyphs">$0.35</text>
+          <rect x="8" y="96" width="122" height="10" fill="#20242e"/>
+          <rect x="8" y="96" width="3" height="10" fill="#34d97b"/>
+          <rect x="8.5" y="96.5" width="121" height="9" fill="none" stroke="#4b5266"/>
+          <text class="tft-t dim" x="136" y="106" textLength="96" lengthAdjust="spacingAndGlyphs">$20.00</text>
+          <text class="tft-t dim" x="8" y="125" textLength="112" lengthAdjust="spacingAndGlyphs">@ 18:51</text>
+          <text class="tft-t dim" x="184" y="125" textLength="48" lengthAdjust="spacingAndGlyphs">1/3</text>
+        </g>
+        <!-- guides -->
+        <line x1="58"  y1="34" x2="58"  y2="236.5" stroke="#667089" stroke-dasharray="4 4" opacity="0.55"/>
+        <line x1="202" y1="34" x2="202" y2="236.5" stroke="#2fd8f2" stroke-dasharray="4 4" opacity="0.55"/>
+      </svg>
+    </div>
+    <p class="mute">Reading the rulers: <code>x=8</code> is the text gutter, <code>x=104</code>
+    (<code>_VALUE_X</code>, the cyan guide) starts the value column — labels are ≤5 glyphs, so
+    they always fit to its left and <code>$9999.99</code> still fits to its right.
+    <code>x=224</code> parks the 12 px Wi-Fi dot in the corner. Rows sit at
+    <code>y=20/38/56</code> — 16 px of glyph plus 2 px of air — with hairline rules at
+    <code>y=18</code> and <code>y=74</code>, the budget bar at <code>y=96</code>, and the footer
+    at <code>y=112</code>.</p>
+
+    <p>And the render pass is nothing more than those constants in order — abridged from
+    <code>render()</code>:</p>
+
+<pre><code><span class="k">def</span> render(tft, view, updated, wifi_ok, ...):
+    tft.fill(st7789.BLACK)                                    <span class="c"># wipe the canvas</span>
+    tft.text(font, header, 8, 0, WHITE, BLACK)                <span class="c"># key name</span>
+    tft.fill_rect(224, 2, 12, 12, GREEN <span class="k">if</span> wifi_ok <span class="k">else</span> RED)  <span class="c"># Wi-Fi dot</span>
+    tft.hline(0, 18, 240, _DIM)                               <span class="c"># rule</span>
+    _row(tft, <span class="s">"Today"</span>, view[<span class="s">"today"</span>], 20)
+    _row(tft, <span class="s">"Week"</span>,  view[<span class="s">"week"</span>],  38)
+    _row(tft, <span class="s">"Month"</span>, view[<span class="s">"month"</span>], 56)
+    tft.hline(0, 74, 240, _DIM)                               <span class="c"># rule</span>
+    ...                                                       <span class="c"># Used row @ 76</span>
+    _budget_bar(tft, view[<span class="s">"used_frac"</span>], view[<span class="s">"budget"</span>], 8, 96, 224, 10)
+    tft.text(font, <span class="s">"@ "</span> + updated, 8, 112, _DIM, BLACK)      <span class="c"># footer</span></code></pre>
+
+    <h3>The web habits, translated</h3>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Building a web page</th><th>Drawing this dash</th></tr></thead>
+        <tbody>
+          <tr><td>CSS + a layout engine decide positions</td><td>You decide: <code>x=8</code>, <code>_VALUE_X=104</code>, rows 18 px apart</td></tr>
+          <tr><td>Responsive reflow on any screen</td><td>One screen, ever: 15 glyph columns × 8 rows</td></tr>
+          <tr><td>Components / a DOM tree</td><td>Four render functions: <code>render</code>, <code>render_account</code>, <code>render_loading</code>, <code>render_error</code></td></tr>
+          <tr><td>Browser repaints when state changes</td><td><code>main.py</code> calls a render function when it has new data</td></tr>
+          <tr><td><code>requestAnimationFrame</code>, 60 fps</td><td>One repaint per refresh — every 60 <em>seconds</em> by default</td></tr>
+          <tr><td>Text wraps; overflow scrolls</td><td><code>_clip()</code> truncates and appends <code>~</code></td></tr>
+          <tr><td>Web fonts, kerning, shaping</td><td>One vendored bitmap font, 16×16 cells, ASCII</td></tr>
+          <tr><td>GPU compositing, vsync</td><td>The ST7789 refreshes itself from GRAM</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout warn">
+      <span class="sign">Why full redraws?</span>
+      <p>Each refresh clears the whole screen and redraws — the simplest correct strategy, and at
+      one repaint per minute the brief blank is invisible in practice. Since text paints its own
+      background, a fancier version could update numbers <b>in place</b> with zero flicker —
+      that's a great first exercise when you remix <code>dash.py</code>.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="section-kicker">The trade</p>
+    <h2>What you give up, what you get</h2>
+    <div class="grid cols-3">
+      <div class="card"><span class="ic">Gone</span><h4>The layout engine</h4>
+        <p>Nothing flows, wraps, or centers itself. Every glyph is where a constant in
+        <code>dash.py</code> put it — and moving a row means re-doing arithmetic.</p></div>
+      <div class="card"><span class="ic">Gone</span><h4>Typography</h4>
+        <p>One font, one size, no kerning, ASCII only. Want bold 24 px? You vendor another
+        bitmap font module and spend the flash space.</p></div>
+      <div class="card"><span class="ic">Gone</span><h4>Animation for free</h4>
+        <p>No vsync, no <code>requestAnimationFrame</code>. Motion means re-blitting rectangles
+        yourself, racing a 40 MHz wire from interpreted Python.</p></div>
+      <div class="card"><span class="ic">Gained</span><h4>Determinism</h4>
+        <p>Same bytes in, same pixels out — no user agents, no zoom levels. The renderer is
+        unit-tested against a fake TFT because its output is exactly predictable.</p></div>
+      <div class="card"><span class="ic">Gained</span><h4>Absurdly small footprint</h4>
+        <p>The frame never exists in MCU RAM: 512-byte scratch buffers and the panel's own
+        GRAM do all the remembering.</p></div>
+      <div class="card"><span class="ic">Gained</span><h4>A stack you can read</h4>
+        <p>Your code to lit glass is ~1,000 lines of vendored Python — no browser, no OS, no
+        driver blobs. Every pixel is explainable.</p></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="section-kicker">Go deeper</p>
+    <h2>Bookmark these</h2>
+    <div class="resources">
+      <a class="res" href="https://newhavendisplay.com/content/app_notes/ST7789V.pdf"><span class="t">ST7789V datasheet</span><span class="d">CASET / RASET / RAMWR and friends, from Sitronix themselves</span></a>
+      <a class="res" href="https://github.com/russhughes/st7789py_mpy"><span class="t">st7789py_mpy</span><span class="d">The vendored driver's home — more fonts, shapes and examples</span></a>
+      <a class="res" href="https://docs.micropython.org/en/latest/library/framebuf.html"><span class="t">MicroPython framebuf</span><span class="d">The buffered alternative: compose in RAM, blit once</span></a>
+      <a class="res" href="http://www.barth-dev.de/online/rgb565-color-picker/"><span class="t">RGB565 color picker</span><span class="d">Pick a color, get the 16-bit value the panel wants</span></a>
+      <a class="res" href="https://developer.chrome.com/blog/inside-browser-part3"><span class="t">Inside the browser renderer</span><span class="d">What Blink does with your CSS — the pipeline we skipped</span></a>
+      <a class="res" href="https://learn.adafruit.com/esp32-s3-reverse-tft-feather"><span class="t">Adafruit's board guide</span><span class="d">The display's wiring, backlight and power rail details</span></a>
+    </div>
+  </section>
+
+  <div class="pager">
+    <a href="app.html"><span class="dir">Back · Chapter 03</span><span class="to">← Tour the app</span></a>
+    <a class="next" href="index.html"><span class="dir">Finish</span><span class="to">Back to the cover →</span></a>
+  </div>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>Companion guide to <a href="https://github.com/AlteredCraft/openrouter-desktop-dash">openrouter-desktop-dash</a> (MIT licensed).</p>
+    <p>Board photography and pinout diagrams © Adafruit Industries, from the
+    <a href="https://learn.adafruit.com/esp32-s3-reverse-tft-feather">Adafruit Learning System guide</a>
+    for this board, used with attribution (CC BY-SA 3.0).</p>
+  </div>
+</footer>
+
+</body>
+</html>

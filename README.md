@@ -14,7 +14,9 @@ frame, a CI monitor, a crypto ticker, a home-automation panel — same skeleton.
 New to microcontrollers but know Python? The **[Mental model](#mental-model)** section is written
 for you — and there's an illustrated companion
 **[field guide](https://alteredcraft.github.io/openrouter-desktop-dash/)** (served from
-[`docs/`](docs/)): the board up close, MicroPython basics, and a guided tour of this app.
+[`docs/`](docs/)): the board up close, MicroPython basics, a guided tour of this app, and a
+visual guide to how drawing to the screen works (no browser, no GPU, no HDMI — the app owns
+every pixel).
 
 ## What it demonstrates
 
