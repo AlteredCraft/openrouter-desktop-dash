@@ -6,7 +6,7 @@
 #   make deploy PORT=/dev/cu.usbmodemXXXX      # find candidates with: ls /dev/cu.usbmodem*
 
 PORT ?= $(shell ls /dev/cu.usbmodem* 2>/dev/null | head -n1)
-MP   := mpremote connect $(PORT)
+MP   := uvx mpremote connect $(PORT)
 
 # Files copied to the board's flash root by `make deploy`. Add new device files here.
 # config.py holds your secrets and is copied separately (it's gitignored and optional).
